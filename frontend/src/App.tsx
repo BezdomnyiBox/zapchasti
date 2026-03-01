@@ -8,6 +8,7 @@ import DashboardPicker from "./pages/DashboardPicker.tsx";
 
 function ProtectedRoute({ children, role }: { children: ReactNode; role: string }) {
   const auth = useContext(AuthContext);
+  if (!auth?.isAuthReady) return null; // проверка токена при загрузке — не редиректить
   if (!auth?.user) return <Navigate to="/login" />;
   if (auth.user.role !== role) return <Navigate to="/" />;
   return children;

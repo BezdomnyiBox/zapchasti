@@ -1,20 +1,14 @@
 import axios from "axios";
-import { AuthContext } from "../context/AuthContext";
-import { useContext } from "react";
 
+const TOKEN_KEY = "access_token";
+
+/** Axios-инстанс с подставленным Bearer-токеном из localStorage (дублирует api.ts для случаев, когда нужен отдельный инстанс). */
 export const useAxios = () => {
-  const auth = useContext(AuthContext);
-
-  const instance = axios.create({
-    baseURL: "/api", // Nginx проксирует /api/ на backend
-  });
-
+  const instance = axios.create({ baseURL: "/api" });
   instance.interceptors.request.use((config) => {
-    if (auth?.user?.token) {
-      config.headers.Authorization = `Bearer ${auth.user.token}`;
-    }
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) config.headers.Authorization = `Bearer ${token}`;
     return config;
   });
-
   return instance;
 };

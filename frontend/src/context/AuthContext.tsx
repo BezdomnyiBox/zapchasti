@@ -1,38 +1,119 @@
-import { createContext, useState } from "react";
+import { createContext, useState, useCallback, useEffect } from "react";
 import type { ReactNode } from "react";
 import { api } from "../services/api";
 import { toast } from "react-toastify";
 
-type User = { email: string; role: string; token: string };
+export const TOKEN_KEY = "access_token";
+
+export type User = {
+  id: number;
+  email: string;
+  username: string;
+  role: string;
+  is_active: boolean;
+};
+
 type AuthContextType = {
   user: User | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<User | null>;
+  register: (email: string, username: string, password: string) => Promise<User | null>;
   logout: () => void;
 };
 
-// Контекст и провайдер в одном файле — eslint-disable для react-refresh
 // eslint-disable-next-line react-refresh/only-export-components
 export const AuthContext = createContext<AuthContextType | null>(null);
 
+async function fetchMe(): Promise<User> {
+  const { data } = await api.get<User>("/auth/me");
+  return data;
+}
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [token, setTokenState] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
 
-  const login = async (email: string, password: string) => {
-    try {
-      const res = await api.post("/auth/login", { email, password });
-      setUser(res.data);
-      toast.success("Logged in!");
-    } catch {
-      toast.error("Login failed");
+  const setToken = useCallback((newToken: string | null) => {
+    if (newToken) {
+      localStorage.setItem(TOKEN_KEY, newToken);
+    } else {
+      localStorage.removeItem(TOKEN_KEY);
     }
-  };
+    setTokenState(newToken);
+  }, []);
 
-  const logout = () => {
+  useEffect(() => {
+    if (!token) return;
+    fetchMe()
+      .then(setUser)
+      .catch(() => {
+        setToken(null);
+        setUser(null);
+      });
+  }, [token, setToken]);
+
+  useEffect(() => {
+    const onLogout = () => {
+      setToken(null);
+      setUser(null);
+    };
+    window.addEventListener("auth:logout", onLogout);
+    return () => window.removeEventListener("auth:logout", onLogout);
+  }, [setToken]);
+
+  const login = useCallback(
+    async (username: string, password: string): Promise<User | null> => {
+      try {
+        const { data } = await api.post<{ access_token: string; refresh_token: string }>(
+          "/auth/login",
+          { username, password }
+        );
+        setToken(data.access_token);
+        const u = await fetchMe();
+        setUser(u);
+        toast.success("Вход выполнен");
+        return u;
+      } catch (err: unknown) {
+        const msg = err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : null;
+        toast.error(typeof msg === "string" ? msg : "Ошибка входа");
+        return null;
+      }
+    },
+    [setToken]
+  );
+
+  const register = useCallback(
+    async (email: string, username: string, password: string): Promise<User | null> => {
+      try {
+        const { data } = await api.post<{ access_token: string; refresh_token: string }>(
+          "/auth/register",
+          { email, username, password }
+        );
+        setToken(data.access_token);
+        const u = await fetchMe();
+        setUser(u);
+        toast.success("Регистрация успешна");
+        return u;
+      } catch (err: unknown) {
+        const msg = err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : null;
+        toast.error(typeof msg === "string" ? msg : "Ошибка регистрации");
+        return null;
+      }
+    },
+    [setToken]
+  );
+
+  const logout = useCallback(() => {
+    setToken(null);
     setUser(null);
-  };
+    toast.info("Выход выполнен");
+  }, [setToken]);
 
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, register, logout }}>
       {children}
     </AuthContext.Provider>
   );

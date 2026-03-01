@@ -22,11 +22,11 @@ function App() {
           <Route path="/register" element={<Register />} />
           <Route
             path="/client"
-            element={<ProtectedRoute role="client"><DashboardClient /></ProtectedRoute>}
+            element={<ProtectedRoute role="user"><DashboardClient /></ProtectedRoute>}
           />
           <Route
             path="/picker"
-            element={<ProtectedRoute role="picker"><DashboardPicker /></ProtectedRoute>}
+            element={<ProtectedRoute role="admin"><DashboardPicker /></ProtectedRoute>}
           />
         </Routes>
       </BrowserRouter>

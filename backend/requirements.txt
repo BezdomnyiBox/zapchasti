@@ -8,7 +8,7 @@ asyncpg
 psycopg2-binary
 alembic
 python-jose[cryptography]
-passlib[bcrypt]
+bcrypt>=4.0,<5
 redis
 celery
 boto3

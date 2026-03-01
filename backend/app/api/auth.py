@@ -40,7 +40,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 def _make_tokens(user: User) -> TokenPair:
-    payload = {"sub": user.id, "role": user.role.value}
+    payload = {"sub": str(user.id), "role": user.role.value}
     return TokenPair(
         access_token=create_access_token(payload),
         refresh_token=create_refresh_token(payload),

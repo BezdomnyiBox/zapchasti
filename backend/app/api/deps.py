@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordBearer
@@ -9,6 +10,7 @@ from app.core.database import AsyncSessionLocal
 from app.crud.user import get_user_by_id
 from app.models.user import User
 
+logger = logging.getLogger(__name__)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
 
@@ -22,15 +24,13 @@ def get_current_user(token: Annotated[str, Depends(oauth2_scheme)]):
         payload = jwt.decode(
             token,
             settings.SECRET_KEY,
-            algorithms=[settings.ALGORITHM]
+            algorithms=[settings.ALGORITHM],
         )
-
         if payload.get("type") != "access":
             raise HTTPException(status_code=401, detail="Invalid token type")
-
         return payload
-
-    except JWTError:
+    except JWTError as e:
+        logger.warning("JWT verification failed: %s", e)
         raise HTTPException(status_code=401, detail="Invalid token")
 
 

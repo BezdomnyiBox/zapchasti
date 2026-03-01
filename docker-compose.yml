@@ -29,10 +29,14 @@ services:
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@local.local}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-pgadmin}
+      # Отключаем server mode — иначе контейнер может уходить в цикл перезапуска
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
     ports:
       - "5051:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+    user: root
     depends_on:
       - db
     networks:

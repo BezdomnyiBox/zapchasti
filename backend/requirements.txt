@@ -12,3 +12,4 @@ redis
 celery
 boto3
 python-multipart
+fastapi-limiter

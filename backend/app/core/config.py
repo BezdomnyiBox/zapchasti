@@ -2,8 +2,15 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str
+    DATABASE_URL: str  # postgresql://...
     REDIS_URL: str
+
+    @property
+    def ASYNC_DATABASE_URL(self) -> str:
+        """URL для async движка (asyncpg)."""
+        if self.DATABASE_URL.startswith("postgresql://"):
+            return self.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return self.DATABASE_URL
     SECRET_KEY: str
     S3_ENDPOINT: str
     S3_ACCESS_KEY: str

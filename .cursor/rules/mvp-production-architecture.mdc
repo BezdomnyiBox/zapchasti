@@ -1,0 +1,112 @@
+---
+description: MVP и production-ready код, чистая архитектура, стек и стандарты безопасности
+alwaysApply: true
+---
+
+# MVP и Production-Ready: архитектура и стандарты
+
+## Принципы
+
+- **Всегда думать о MVP и production-ready коде**: минимум для запуска, но без хаков и технического долга.
+- **Ответы**: пошаговые, с примерами кода и пояснениями.
+- **Зависимости**: минимизировать для MVP; при необходимости давать варианты расширения.
+
+---
+
+## Архитектура
+
+- **Чистая архитектура**: `backend → API → frontend`, чёткое разделение слоёв.
+- **Backend**: сервисы/репозитории/модели не смешивать с HTTP; API — тонкий слой поверх бизнес-логики.
+- **Frontend**: страницы/компоненты/хуки/сервисы; запросы только через слой API (axios).
+
+---
+
+## Backend
+
+- **Стек**: FastAPI, PostgreSQL, Redis, JWT, role-based access.
+- **Пароли**: только bcrypt (или passlib с bcrypt).
+- **Роли**: проверять на каждом защищённом эндпоинте; не доверять только фронту.
+- **Безопасность**: HTTPS, строгий CORS, rate limiting на критичных маршрутах.
+- **Слои**: роутеры → сервисы → репозитории/CRUD → модели БД.
+
+---
+
+## Frontend
+
+- **Стек**: React 18+, TypeScript, React Router v6, Context + useReducer (при необходимости).
+- **Верстка**: mobile-first, адаптивная (breakpoints, относительные единицы).
+- **Производительность**:
+  - lazy-loading страниц: `React.lazy()` + `Suspense`.
+  - lazy-loading карт: подгрузка карты только при монтировании/видимости.
+  - тяжёлые компоненты оборачивать в `React.memo()` при обоснованной необходимости.
+- **Компоненты**: переиспользуемые, с JSDoc/комментариями для сложной логики.
+- **API**: все запросы через axios; единый инстанс с JWT interceptor (добавлять токен в заголовок, обрабатывать 401).
+
+---
+
+## Медиа-загрузка
+
+- **UX**: drag & drop + превью перед отправкой.
+- **Валидация**: формат (whitelist MIME/расширений) и размер файла на клиенте и на сервере.
+- **Пример (клиент)**: проверка `file.type` и `file.size` до `FormData`; превью через `URL.createObjectURL(file)`.
+
+---
+
+## Карты
+
+- **Стек**: Leaflet + OpenStreetMap.
+- **Оптимизация**: кластеризация маркеров при большом количестве; кэширование/дебаунс при построении маршрутов; по возможности не создавать лишние слои при обновлениях.
+
+---
+
+## Безопасность и роли
+
+- **Пароли**: bcrypt (cost 12+ для production).
+- **Транспорт**: HTTPS; в production не отдавать чувствительные данные по HTTP.
+- **CORS**: строго задавать `origins` (не `*` в production).
+- **Rate limiting**: на логин, регистрацию, сброс пароля, загрузку файлов.
+- **Роли**: проверка и на frontend (скрытие UI), и на backend (обязательная проверка прав на каждом эндпоинте).
+
+---
+
+## Примеры
+
+### Axios + JWT interceptor
+
+```typescript
+// api/client.ts
+const api = axios.create({ baseURL: process.env.REACT_APP_API_URL });
+api.interceptors.request.use((config) => {
+  const token = getStoredToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+api.interceptors.response.use(
+  (r) => r,
+  (err) => {
+    if (err.response?.status === 401) clearTokenAndRedirectToLogin();
+    return Promise.reject(err);
+  }
+);
+```
+
+### Lazy route + memo
+
+```tsx
+const MapPage = React.lazy(() => import('./pages/MapPage'));
+// В роутере: <Suspense fallback={<Spinner />}><MapPage /></Suspense>
+
+const HeavyMarkerList = React.memo(({ items }: { items: Item[] }) => { ... });
+```
+
+### Роль на backend (FastAPI)
+
+```python
+from fastapi import Depends
+def require_role(required: str):
+    def check(current_user: User = Depends(get_current_user)):
+        if current_user.role != required and current_user.role != "admin":
+            raise HTTPException(403, "Forbidden")
+        return current_user
+    return check
+```

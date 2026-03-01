@@ -1,0 +1,14 @@
+pydantic-settings>=2.0.0
+fastapi
+uvicorn[standard]
+sqlalchemy>=2.0
+asyncpg
+psycopg2-binary
+alembic
+pydantic-settings
+python-jose[cryptography]
+passlib[bcrypt]
+redis
+celery
+boto3
+python-multipart

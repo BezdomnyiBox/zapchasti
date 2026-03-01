@@ -1,4 +1,14 @@
+from pathlib import Path
+
 from pydantic_settings import BaseSettings
+
+# backend/app/core/config.py -> backend/ = 3 уровня вверх; корень проекта = родитель backend/
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent
+_ROOT_DIR = _BACKEND_DIR.parent
+# Приоритет: .env в корне проекта, иначе backend/.env, иначе текущая директория (для Docker)
+_ENV_FILE = _ROOT_DIR / ".env" if (_ROOT_DIR / ".env").exists() else _BACKEND_DIR / ".env"
+if not _ENV_FILE.exists():
+    _ENV_FILE = Path(".env")
 
 
 class Settings(BaseSettings):
@@ -21,6 +31,6 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
 
     class Config:
-        env_file = ".env"
+        env_file = str(_ENV_FILE)
 
 settings = Settings()

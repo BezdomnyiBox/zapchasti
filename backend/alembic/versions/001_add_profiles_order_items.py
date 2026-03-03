@@ -19,17 +19,35 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    # --- 1. Drop old tables that reference orders (in dependency order) ---
-    op.drop_table("order_photos")
-    op.drop_table("delivery_tasks")
-    op.drop_table("pickup_tasks")
-    op.drop_table("selection_tasks")
-    op.drop_table("orders")
+    # --- 1. Drop old tables (IF EXISTS for idempotency) ---
+    op.execute("DROP TABLE IF EXISTS order_photos CASCADE")
+    op.execute("DROP TABLE IF EXISTS delivery_tasks CASCADE")
+    op.execute("DROP TABLE IF EXISTS pickup_tasks CASCADE")
+    op.execute("DROP TABLE IF EXISTS selection_tasks CASCADE")
+    op.execute("DROP TABLE IF EXISTS order_items CASCADE")
+    op.execute("DROP TABLE IF EXISTS orders CASCADE")
+    op.execute("DROP TABLE IF EXISTS picker_profiles CASCADE")
 
-    # --- 2. Alter users: add phone ---
-    op.add_column("users", sa.Column("phone", sa.String(20), nullable=True))
+    # --- 2. Drop orphaned PostgreSQL enum types ---
+    op.execute("DROP TYPE IF EXISTS orderstatus")
+    op.execute("DROP TYPE IF EXISTS taskstatus")
+    op.execute("DROP TYPE IF EXISTS cargosize")
+    op.execute("DROP TYPE IF EXISTS order_item_status")
 
-    # --- 3. Create picker_profiles ---
+    # --- 3. Alter users: add phone (idempotent) ---
+    op.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM information_schema.columns
+                WHERE table_name = 'users' AND column_name = 'phone'
+            ) THEN
+                ALTER TABLE users ADD COLUMN phone VARCHAR(20);
+            END IF;
+        END $$;
+    """)
+
+    # --- 4. Create picker_profiles ---
     op.create_table(
         "picker_profiles",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
@@ -42,7 +60,7 @@ def upgrade() -> None:
         sa.Column("delivery_large_price", sa.Numeric(10, 2), nullable=True),
     )
 
-    # --- 4. Recreate orders (simplified) ---
+    # --- 5. Recreate orders (simplified) ---
     op.create_table(
         "orders",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
@@ -52,7 +70,6 @@ def upgrade() -> None:
         sa.Column("status", sa.Enum(
             "new", "selection", "pickup", "delivery", "closed", "cancelled",
             name="orderstatus",
-            create_type=False,
         ), nullable=False, server_default="new"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
                   server_default=sa.func.now()),
@@ -60,7 +77,7 @@ def upgrade() -> None:
                   server_default=sa.func.now()),
     )
 
-    # --- 5. Create order_items ---
+    # --- 6. Create order_items ---
     op.create_table(
         "order_items",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
@@ -89,7 +106,13 @@ def upgrade() -> None:
                   server_default=sa.func.now()),
     )
 
-    # --- 6. Recreate tasks pointing to order_items ---
+    # --- 7. Recreate tasks pointing to order_items ---
+    _taskstatus = sa.Enum(
+        "pending", "in_progress", "waiting_client", "approved",
+        "rejected", "completed", "cancelled",
+        name="taskstatus",
+    )
+
     op.create_table(
         "selection_tasks",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
@@ -99,16 +122,18 @@ def upgrade() -> None:
         sa.Column("picker_id", sa.Integer,
                   sa.ForeignKey("users.id", ondelete="SET NULL"),
                   nullable=True, index=True),
-        sa.Column("status", sa.Enum(
-            "pending", "in_progress", "waiting_client", "approved",
-            "rejected", "completed", "cancelled",
-            name="taskstatus", create_type=False,
-        ), nullable=False, server_default="pending"),
+        sa.Column("status", _taskstatus, nullable=False, server_default="pending"),
         sa.Column("note", sa.Text, nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
                   server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False,
                   server_default=sa.func.now()),
+    )
+
+    _taskstatus_reuse = sa.Enum(
+        "pending", "in_progress", "waiting_client", "approved",
+        "rejected", "completed", "cancelled",
+        name="taskstatus", create_type=False,
     )
 
     op.create_table(
@@ -124,11 +149,7 @@ def upgrade() -> None:
         sa.Column("seller_lat", sa.Numeric(10, 7), nullable=True),
         sa.Column("seller_lng", sa.Numeric(10, 7), nullable=True),
         sa.Column("needs_inspection", sa.Boolean, nullable=False, server_default="true"),
-        sa.Column("status", sa.Enum(
-            "pending", "in_progress", "waiting_client", "approved",
-            "rejected", "completed", "cancelled",
-            name="taskstatus", create_type=False,
-        ), nullable=False, server_default="pending"),
+        sa.Column("status", _taskstatus_reuse, nullable=False, server_default="pending"),
         sa.Column("note", sa.Text, nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
                   server_default=sa.func.now()),
@@ -147,11 +168,7 @@ def upgrade() -> None:
                   nullable=True, index=True),
         sa.Column("delivery_address", sa.String(500), nullable=True),
         sa.Column("is_third_party_carrier", sa.Boolean, nullable=False, server_default="false"),
-        sa.Column("status", sa.Enum(
-            "pending", "in_progress", "waiting_client", "approved",
-            "rejected", "completed", "cancelled",
-            name="taskstatus", create_type=False,
-        ), nullable=False, server_default="pending"),
+        sa.Column("status", _taskstatus_reuse, nullable=False, server_default="pending"),
         sa.Column("note", sa.Text, nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
                   server_default=sa.func.now()),
@@ -159,7 +176,7 @@ def upgrade() -> None:
                   server_default=sa.func.now()),
     )
 
-    # --- 7. Recreate order_photos pointing to order_items ---
+    # --- 8. Recreate order_photos pointing to order_items ---
     op.create_table(
         "order_photos",
         sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
@@ -190,3 +207,5 @@ def downgrade() -> None:
     op.drop_column("users", "phone")
     op.execute("DROP TYPE IF EXISTS cargosize")
     op.execute("DROP TYPE IF EXISTS order_item_status")
+    op.execute("DROP TYPE IF EXISTS orderstatus")
+    op.execute("DROP TYPE IF EXISTS taskstatus")

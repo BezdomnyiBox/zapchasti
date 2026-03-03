@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.user import User
@@ -24,18 +24,21 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
 async def get_user_by_username_or_email(
     session: AsyncSession, username_or_email: str
 ) -> User | None:
-    """Поиск пользователя по username или по email (для логина)."""
-    user = await get_user_by_username(session, username_or_email)
-    if user is not None:
-        return user
-    return await get_user_by_email(session, username_or_email)
+    """Поиск пользователя по username или по email (для логина) — один запрос."""
+    result = await session.execute(
+        select(User).where(
+            or_(User.username == username_or_email, User.email == username_or_email)
+        )
+    )
+    return result.scalars().one_or_none()
 
 
 async def create_user(session: AsyncSession, data: UserCreate) -> User:
+    hashed = await hash_password(data.password)
     user = User(
         email=data.email,
         username=data.username,
-        hashed_password=hash_password(data.password),
+        hashed_password=hashed,
     )
     session.add(user)
     await session.commit()

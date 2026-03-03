@@ -1,9 +1,13 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import String, Boolean, DateTime, Enum
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column
 import enum
 
 from app.core.database import Base  # noqa: F401
+
+
+def _utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class UserRole(str, enum.Enum):
@@ -23,10 +27,10 @@ class User(Base):
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=_utcnow, nullable=False
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
     )
 
     def __repr__(self) -> str:

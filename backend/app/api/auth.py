@@ -5,24 +5,20 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi_limiter.depends import RateLimiter
-from pyrate_limiter import Duration, Limiter, Rate
 from sqlalchemy.ext.asyncio import AsyncSession
-
-# 5 запросов в 60 секунд на эндпоинты регистрации/логина
-_auth_limiter = Limiter(Rate(5, Duration.SECOND * 60))
 
 from app.api.deps import get_db, get_current_user_model
 from app.core.security import (
     verify_password,
     create_access_token,
     create_refresh_token,
-    hash_password,
 )
 from app.crud.user import (
     get_user_by_username_or_email,
     get_user_by_username,
     get_user_by_email,
     create_user,
+    get_user_by_id,
 )
 from app.models.user import User
 from app.schemas.auth import (
@@ -34,7 +30,6 @@ from app.schemas.auth import (
 )
 from jose import jwt, JWTError
 from app.core.config import settings
-from app.crud.user import get_user_by_id
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -50,13 +45,12 @@ def _make_tokens(user: User) -> TokenPair:
 @router.post(
     "/register",
     response_model=TokenPair,
-    dependencies=[Depends(RateLimiter(limiter=_auth_limiter))],
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
 )
 async def register(
     data: UserCreate,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Регистрация нового пользователя. Не более 5 запросов в минуту."""
     if await get_user_by_username(db, data.username):
         raise HTTPException(status_code=400, detail="Username already taken")
     if await get_user_by_email(db, data.email):
@@ -68,13 +62,12 @@ async def register(
 @router.post(
     "/login",
     response_model=TokenPair,
-    dependencies=[Depends(RateLimiter(limiter=_auth_limiter))],
+    dependencies=[Depends(RateLimiter(times=5, seconds=60))],
 )
 async def login(
     data: UserLogin,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Логин по username или email. Не более 5 попыток в минуту."""
     user = await get_user_by_username_or_email(db, data.username)
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
@@ -88,7 +81,6 @@ async def refresh(
     body: RefreshTokenRequest,
     db: Annotated[AsyncSession, Depends(get_db)],
 ):
-    """Обмен refresh-токена на новую пару access + refresh."""
     try:
         payload = jwt.decode(
             body.refresh_token,
@@ -112,5 +104,4 @@ async def refresh(
 async def me(
     current_user: Annotated[User, Depends(get_current_user_model)],
 ):
-    """Текущий авторизованный пользователь."""
     return current_user

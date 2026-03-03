@@ -50,13 +50,17 @@ async def get_current_user_model(
     return user
 
 
+ROLE_HIERARCHY = {"user": 0, "picker": 1, "admin": 2}
+
+
 def require_role(required_role: str):
-    """Проверка роли из JWT payload. Admin имеет доступ ко всем ролям."""
-    def role_checker(user=Depends(get_current_user)):
-        user_role = user.get("role")
-        if user_role == "admin":
-            return user
-        if user_role != required_role:
+    """Проверка роли из JWT payload. Роли иерархические: admin > picker > user."""
+    async def role_checker(
+        user: Annotated[User, Depends(get_current_user_model)],
+    ) -> User:
+        user_level = ROLE_HIERARCHY.get(user.role.value, 0)
+        required_level = ROLE_HIERARCHY.get(required_role, 0)
+        if user_level < required_level:
             raise HTTPException(status_code=403, detail="Forbidden")
         return user
     return role_checker

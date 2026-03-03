@@ -33,6 +33,7 @@ async def create_order(db: AsyncSession, client_id: int, data: OrderCreate) -> O
     db.add(order)
     await db.flush()
 
+    items: list[OrderItem] = []
     for item_data in data.items:
         has_drom = bool(item_data.drom_url)
         initial_status = OrderStatus.PICKUP if has_drom else OrderStatus.SELECTION
@@ -55,6 +56,7 @@ async def create_order(db: AsyncSession, client_id: int, data: OrderCreate) -> O
         )
         db.add(item)
         await db.flush()
+        items.append(item)
 
         if not has_drom:
             db.add(SelectionTask(order_item_id=item.id, status=TaskStatus.PENDING))
@@ -66,14 +68,33 @@ async def create_order(db: AsyncSession, client_id: int, data: OrderCreate) -> O
                 status=TaskStatus.PENDING,
             ))
 
-    _sync_order_status(order)
+    _sync_order_status_from_items(order, items)
     await db.commit()
     await db.refresh(order)
     return order
 
 
+def _sync_order_status_from_items(order: Order, items: list[OrderItem]) -> None:
+    """Derive order-level status from items. Call before commit (avoids lazy load)."""
+    if not items:
+        return
+    statuses = [it.status for it in items]
+    if all(s == OrderStatus.CLOSED for s in statuses):
+        order.status = OrderStatus.CLOSED
+    elif all(s == OrderStatus.CANCELLED for s in statuses):
+        order.status = OrderStatus.CANCELLED
+    elif any(s == OrderStatus.DELIVERY for s in statuses):
+        order.status = OrderStatus.DELIVERY
+    elif any(s == OrderStatus.PICKUP for s in statuses):
+        order.status = OrderStatus.PICKUP
+    elif any(s == OrderStatus.SELECTION for s in statuses):
+        order.status = OrderStatus.SELECTION
+    else:
+        order.status = OrderStatus.NEW
+
+
 def _sync_order_status(order: Order) -> None:
-    """Derive order-level status from items. Call before commit."""
+    """Derive order-level status from items. Requires order.items already loaded."""
     if not order.items:
         return
     statuses = [it.status for it in order.items]

@@ -7,6 +7,7 @@ Stage 5: Mark picked up (confirmed → picked_up)
 Stage 6: Handoff to carrier (picked_up → handed_to_carrier)
 """
 import io
+import logging
 import uuid
 from typing import Annotated
 
@@ -30,6 +31,7 @@ from app.schemas.order import OrderResponse, OrderListItem, PhotoResponse
 from app.core.s3 import upload_fileobj
 
 router = APIRouter(prefix="/courier", tags=["courier"])
+logger = logging.getLogger(__name__)
 
 ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp"}
 MAX_SIZE_BYTES = 10 * 1024 * 1024
@@ -94,7 +96,11 @@ async def upload_photo(
 
     ext = file.filename.rsplit(".", 1)[-1] if file.filename and "." in file.filename else "jpg"
     key = f"orders/{order_id}/{uuid.uuid4().hex}.{ext}"
-    file_url = upload_fileobj(io.BytesIO(content), key, file.content_type)
+    try:
+        file_url = upload_fileobj(io.BytesIO(content), key, file.content_type)
+    except Exception as exc:
+        logger.exception("S3 upload failed for order_id=%s key=%s", order_id, key)
+        raise HTTPException(502, "Не удалось загрузить фото в хранилище") from exc
 
     photo = await create_photo(db, order_id, key, file_url, current_user.id)
     return photo

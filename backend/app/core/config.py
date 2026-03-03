@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     S3_ACCESS_KEY: str
     S3_SECRET_KEY: str
     S3_BUCKET: str
+    S3_REGION: str = "ru-3"
+    S3_ADDRESSING_STYLE: str = "virtual"
+    S3_PUBLIC_BASE_URL: str | None = None
+    S3_VERIFY_SSL: bool = True
+    S3_UPLOAD_ACL: str | None = None
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     ALGORITHM: str = "HS256"

@@ -8,9 +8,11 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 const DashboardClient = lazy(() => import("./pages/DashboardClient"));
+const CreateOrder = lazy(() => import("./pages/CreateOrder"));
+const OrderDetail = lazy(() => import("./pages/OrderDetail"));
 const DashboardPicker = lazy(() => import("./pages/DashboardPicker"));
 
-const ROLE_LEVEL: Record<UserRole, number> = { user: 1, admin: 2 };
+const ROLE_LEVEL: Record<UserRole, number> = { user: 1, picker: 2, admin: 3 };
 
 function ProtectedRoute({ children, minRole }: { children: ReactNode; minRole: UserRole }) {
   const auth = useContext(AuthContext);
@@ -34,8 +36,16 @@ function App() {
               element={<ProtectedRoute minRole="user"><DashboardClient /></ProtectedRoute>}
             />
             <Route
+              path="/client/new"
+              element={<ProtectedRoute minRole="user"><CreateOrder /></ProtectedRoute>}
+            />
+            <Route
+              path="/client/orders/:orderId"
+              element={<ProtectedRoute minRole="user"><OrderDetail /></ProtectedRoute>}
+            />
+            <Route
               path="/picker"
-              element={<ProtectedRoute minRole="admin"><DashboardPicker /></ProtectedRoute>}
+              element={<ProtectedRoute minRole="picker"><DashboardPicker /></ProtectedRoute>}
             />
           </Routes>
         </Suspense>

@@ -11,6 +11,7 @@ const DashboardClient = lazy(() => import("./pages/DashboardClient"));
 const CreateOrder = lazy(() => import("./pages/CreateOrder"));
 const OrderDetail = lazy(() => import("./pages/OrderDetail"));
 const DashboardPicker = lazy(() => import("./pages/DashboardPicker"));
+const ProfilePage = lazy(() => import("./pages/Profile"));
 
 const ROLE_LEVEL: Record<UserRole, number> = { user: 1, picker: 2, admin: 3 };
 
@@ -42,6 +43,10 @@ function App() {
             <Route
               path="/client/orders/:orderId"
               element={<ProtectedRoute minRole="user"><OrderDetail /></ProtectedRoute>}
+            />
+            <Route
+              path="/profile"
+              element={<ProtectedRoute minRole="user"><ProfilePage /></ProtectedRoute>}
             />
             <Route
               path="/picker"

@@ -12,6 +12,7 @@ export type User = {
   id: number;
   email: string;
   username: string;
+  phone: string | null;
   role: UserRole;
   is_active: boolean;
 };

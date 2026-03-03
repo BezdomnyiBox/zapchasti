@@ -40,6 +40,12 @@ export default function DashboardClient() {
         <div className="mx-auto max-w-3xl flex items-center justify-between">
           <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Мои заявки</h1>
           <div className="flex items-center gap-3">
+            <Link
+              to="/profile"
+              className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition"
+            >
+              Профиль
+            </Link>
             <span className="text-sm text-slate-500 dark:text-slate-400">{auth?.user?.username}</span>
             <button
               onClick={() => { auth?.logout(); navigate("/login", { replace: true }); }}
@@ -82,8 +88,8 @@ export default function DashboardClient() {
                   <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
                     Заявка #{o.id}
                   </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                    {o.drom_url || o.description || "—"}
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                    {o.items_count} {o.items_count === 1 ? "позиция" : o.items_count < 5 ? "позиции" : "позиций"}
                   </p>
                 </div>
                 <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium ${STATUS_COLORS[o.status]}`}>

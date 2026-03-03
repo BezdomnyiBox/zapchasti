@@ -1,6 +1,7 @@
-from app.models.user import User
+from app.models.user import User, PickerProfile
 from app.models.order import (
     Order,
+    OrderItem,
     SelectionTask,
     PickupTask,
     DeliveryTask,
@@ -9,7 +10,9 @@ from app.models.order import (
 
 __all__ = [
     "User",
+    "PickerProfile",
     "Order",
+    "OrderItem",
     "SelectionTask",
     "PickupTask",
     "DeliveryTask",

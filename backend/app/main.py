@@ -6,17 +6,14 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from app.core.database import engine, Base
 from app.api.router import router
-from app.models import User, Order, SelectionTask, PickupTask, DeliveryTask, OrderPhoto  # noqa: F401
+from app.models import User, PickerProfile, Order, OrderItem, SelectionTask, PickupTask, DeliveryTask, OrderPhoto  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
     try:
         from app.core.s3 import ensure_bucket
         ensure_bucket()
@@ -41,7 +38,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://saqasapchaas.ru", "http://localhost:5173", "http://79.141.67.75"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 

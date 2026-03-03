@@ -31,6 +31,11 @@ class TaskStatus(str, enum.Enum):
     CANCELLED = "cancelled"
 
 
+class CargoSize(str, enum.Enum):
+    SMALL = "small"
+    LARGE = "large"
+
+
 class Order(Base):
     __tablename__ = "orders"
 
@@ -38,11 +43,7 @@ class Order(Base):
     client_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True,
     )
-    drom_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    target_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
-    prepaid_to_seller: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[OrderStatus] = mapped_column(
         Enum(OrderStatus), default=OrderStatus.NEW, nullable=False,
     )
@@ -54,18 +55,66 @@ class Order(Base):
     )
 
     client = relationship("User", backref="orders", lazy="selectin")
-    selection_task = relationship("SelectionTask", back_populates="order", uselist=False, lazy="selectin")
-    pickup_task = relationship("PickupTask", back_populates="order", uselist=False, lazy="selectin")
-    delivery_task = relationship("DeliveryTask", back_populates="order", uselist=False, lazy="selectin")
-    photos = relationship("OrderPhoto", back_populates="order", lazy="selectin")
+    items: Mapped[list["OrderItem"]] = relationship(
+        back_populates="order", lazy="selectin", cascade="all, delete-orphan",
+    )
+
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    order_id: Mapped[int] = mapped_column(
+        ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+
+    drom_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    car_brand: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    car_model: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    car_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    body_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    part_name: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    part_number: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    target_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
+    comment: Mapped[str | None] = mapped_column(Text, nullable=True)
+    prepaid_to_seller: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    cargo_size: Mapped[CargoSize] = mapped_column(
+        Enum(CargoSize), default=CargoSize.SMALL, nullable=False,
+    )
+    status: Mapped[OrderStatus] = mapped_column(
+        Enum(OrderStatus, name="order_item_status"), default=OrderStatus.NEW, nullable=False,
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False,
+    )
+
+    order: Mapped["Order"] = relationship(back_populates="items")
+    selection_task: Mapped["SelectionTask | None"] = relationship(
+        back_populates="order_item", uselist=False, lazy="selectin",
+    )
+    pickup_task: Mapped["PickupTask | None"] = relationship(
+        back_populates="order_item", uselist=False, lazy="selectin",
+    )
+    delivery_task: Mapped["DeliveryTask | None"] = relationship(
+        back_populates="order_item", uselist=False, lazy="selectin",
+    )
+    photos: Mapped[list["OrderPhoto"]] = relationship(
+        back_populates="order_item", lazy="selectin",
+    )
 
 
 class SelectionTask(Base):
     __tablename__ = "selection_tasks"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    order_id: Mapped[int] = mapped_column(
-        ForeignKey("orders.id", ondelete="CASCADE"), unique=True, nullable=False,
+    order_item_id: Mapped[int] = mapped_column(
+        ForeignKey("order_items.id", ondelete="CASCADE"), unique=True, nullable=False,
     )
     picker_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True,
@@ -81,17 +130,19 @@ class SelectionTask(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False,
     )
 
-    order = relationship("Order", back_populates="selection_task")
+    order_item: Mapped["OrderItem"] = relationship(back_populates="selection_task")
     picker = relationship("User", lazy="selectin")
-    photos = relationship("OrderPhoto", back_populates="selection_task", lazy="selectin")
+    photos: Mapped[list["OrderPhoto"]] = relationship(
+        back_populates="selection_task", lazy="selectin",
+    )
 
 
 class PickupTask(Base):
     __tablename__ = "pickup_tasks"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    order_id: Mapped[int] = mapped_column(
-        ForeignKey("orders.id", ondelete="CASCADE"), unique=True, nullable=False,
+    order_item_id: Mapped[int] = mapped_column(
+        ForeignKey("order_items.id", ondelete="CASCADE"), unique=True, nullable=False,
     )
     picker_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True,
@@ -111,17 +162,19 @@ class PickupTask(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False,
     )
 
-    order = relationship("Order", back_populates="pickup_task")
+    order_item: Mapped["OrderItem"] = relationship(back_populates="pickup_task")
     picker = relationship("User", lazy="selectin")
-    photos = relationship("OrderPhoto", back_populates="pickup_task", lazy="selectin")
+    photos: Mapped[list["OrderPhoto"]] = relationship(
+        back_populates="pickup_task", lazy="selectin",
+    )
 
 
 class DeliveryTask(Base):
     __tablename__ = "delivery_tasks"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    order_id: Mapped[int] = mapped_column(
-        ForeignKey("orders.id", ondelete="CASCADE"), unique=True, nullable=False,
+    order_item_id: Mapped[int] = mapped_column(
+        ForeignKey("order_items.id", ondelete="CASCADE"), unique=True, nullable=False,
     )
     picker_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True,
@@ -139,7 +192,7 @@ class DeliveryTask(Base):
         DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False,
     )
 
-    order = relationship("Order", back_populates="delivery_task")
+    order_item: Mapped["OrderItem"] = relationship(back_populates="delivery_task")
     picker = relationship("User", lazy="selectin")
 
 
@@ -147,8 +200,8 @@ class OrderPhoto(Base):
     __tablename__ = "order_photos"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    order_id: Mapped[int] = mapped_column(
-        ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True,
+    order_item_id: Mapped[int] = mapped_column(
+        ForeignKey("order_items.id", ondelete="CASCADE"), nullable=False, index=True,
     )
     selection_task_id: Mapped[int | None] = mapped_column(
         ForeignKey("selection_tasks.id", ondelete="SET NULL"), nullable=True,
@@ -165,6 +218,6 @@ class OrderPhoto(Base):
         DateTime(timezone=True), default=_utcnow, nullable=False,
     )
 
-    order = relationship("Order", back_populates="photos")
-    selection_task = relationship("SelectionTask", back_populates="photos")
-    pickup_task = relationship("PickupTask", back_populates="photos")
+    order_item: Mapped["OrderItem"] = relationship(back_populates="photos")
+    selection_task: Mapped["SelectionTask | None"] = relationship(back_populates="photos")
+    pickup_task: Mapped["PickupTask | None"] = relationship(back_populates="photos")

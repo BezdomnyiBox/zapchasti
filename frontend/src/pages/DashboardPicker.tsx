@@ -1,5 +1,5 @@
 import { useEffect, useState, useContext, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AuthContext } from "../context/AuthContext";
 import { getSelectionTasks, getPickupTasks, getDeliveryTasks, updateSelectionTask, updatePickupTask, updateDeliveryTask } from "../services/tasks";
@@ -97,6 +97,12 @@ export default function DashboardPicker() {
         <div className="mx-auto max-w-4xl flex items-center justify-between">
           <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Панель подборщика</h1>
           <div className="flex items-center gap-3">
+            <Link
+              to="/profile"
+              className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition"
+            >
+              Профиль
+            </Link>
             <span className="text-sm text-slate-500 dark:text-slate-400">{auth?.user?.username}</span>
             <button
               onClick={() => { auth?.logout(); navigate("/login", { replace: true }); }}
@@ -128,6 +134,7 @@ export default function DashboardPicker() {
 
         {!loading && tab === "orders" && (
           <div className="space-y-3">
+            {orders.length === 0 && <p className="text-slate-500 text-center">Нет заказов</p>}
             {orders.map((o) => (
               <div
                 key={o.id}
@@ -138,8 +145,8 @@ export default function DashboardPicker() {
                   <span className="font-medium text-slate-800 dark:text-slate-100">#{o.id}</span>
                   <span className="text-xs text-slate-500">{o.status}</span>
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400 truncate mt-1">
-                  {o.drom_url || o.description || "—"}
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  {o.items_count} {o.items_count === 1 ? "позиция" : o.items_count < 5 ? "позиции" : "позиций"}
                 </p>
               </div>
             ))}
@@ -152,7 +159,7 @@ export default function DashboardPicker() {
             {selTasks.map((t) => (
               <div key={t.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-slate-800 dark:text-slate-100">Заказ #{t.order_id}</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-100">Позиция #{t.order_item_id}</span>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${TASK_COLORS[t.status]}`}>
                     {TASK_LABELS[t.status]}
                   </span>
@@ -181,7 +188,7 @@ export default function DashboardPicker() {
             {pickTasks.map((t) => (
               <div key={t.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-slate-800 dark:text-slate-100">Заказ #{t.order_id}</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-100">Позиция #{t.order_item_id}</span>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${TASK_COLORS[t.status]}`}>
                     {TASK_LABELS[t.status]}
                   </span>
@@ -211,7 +218,7 @@ export default function DashboardPicker() {
             {delTasks.map((t) => (
               <div key={t.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-slate-800 dark:text-slate-100">Заказ #{t.order_id}</span>
+                  <span className="font-medium text-slate-800 dark:text-slate-100">Позиция #{t.order_item_id}</span>
                   <span className={`px-2 py-0.5 rounded text-xs font-medium ${TASK_COLORS[t.status]}`}>
                     {TASK_LABELS[t.status]}
                   </span>

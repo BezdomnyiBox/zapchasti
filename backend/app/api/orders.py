@@ -29,6 +29,9 @@ async def create_new_order(
     db: Annotated[AsyncSession, Depends(get_db)],
     current_user: Annotated[User, Depends(get_current_user_model)],
 ):
+    if not current_user.phone:
+        raise HTTPException(400, "Заполните номер телефона в профиле перед созданием заявки")
+
     order = await create_order(db, current_user.id, data)
     order = await get_order_by_id(db, order.id)
     return order
@@ -44,7 +47,16 @@ async def list_orders(
         orders = await get_all_orders(db, status=status)
     else:
         orders = await get_orders_by_client(db, current_user.id)
-    return orders
+
+    return [
+        OrderListItem(
+            id=o.id,
+            status=o.status,
+            items_count=len(o.items) if o.items else 0,
+            created_at=o.created_at,
+        )
+        for o in orders
+    ]
 
 
 @router.get("/{order_id}", response_model=OrderResponse)

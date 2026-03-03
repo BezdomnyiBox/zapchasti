@@ -1,8 +1,8 @@
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User
-from app.schemas.auth import UserCreate
+from app.models.user import User, PickerProfile
+from app.schemas.auth import UserCreate, PickerProfileUpdate
 from app.core.security import hash_password
 
 
@@ -44,3 +44,35 @@ async def create_user(session: AsyncSession, data: UserCreate) -> User:
     await session.commit()
     await session.refresh(user)
     return user
+
+
+async def update_user_phone(session: AsyncSession, user: User, phone: str | None) -> User:
+    user.phone = phone
+    await session.commit()
+    await session.refresh(user)
+    return user
+
+
+# ── Picker profile ────────────────────────────────────────
+
+async def get_picker_profile(session: AsyncSession, user_id: int) -> PickerProfile | None:
+    result = await session.execute(
+        select(PickerProfile).where(PickerProfile.user_id == user_id)
+    )
+    return result.scalars().one_or_none()
+
+
+async def upsert_picker_profile(
+    session: AsyncSession, user_id: int, data: PickerProfileUpdate,
+) -> PickerProfile:
+    profile = await get_picker_profile(session, user_id)
+    if not profile:
+        profile = PickerProfile(user_id=user_id)
+        session.add(profile)
+
+    for field, value in data.model_dump(exclude_unset=True).items():
+        setattr(profile, field, value)
+
+    await session.commit()
+    await session.refresh(profile)
+    return profile

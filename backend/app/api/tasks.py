@@ -8,7 +8,8 @@ from app.models.user import User
 from app.models.order import OrderStatus, TaskStatus
 from app.crud.order import (
     get_order_by_id,
-    update_order_status,
+    recalc_order_status,
+    get_order_item,
     get_selection_tasks,
     get_selection_task,
     update_selection_task,
@@ -30,6 +31,19 @@ from app.schemas.order import (
 )
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+
+async def _update_item_and_order_status(
+    db: AsyncSession, order_item_id: int, new_item_status: OrderStatus,
+):
+    """Set item status and recalculate parent order status."""
+    item = await get_order_item(db, order_item_id)
+    if not item:
+        return
+    item.status = new_item_status
+    order = await get_order_by_id(db, item.order_id)
+    if order:
+        await recalc_order_status(db, order)
 
 
 # ── Selection tasks ──────────────────────────────────────
@@ -71,18 +85,15 @@ async def update_selection(
         updates["picker_id"] = current_user.id
 
     if data.status == TaskStatus.COMPLETED:
-        order = await get_order_by_id(db, task.order_id)
-        if order:
-            existing_pickup = await get_pickup_task(db, task.id)
-            if not existing_pickup:
-                from app.models.order import PickupTask as PickupTaskModel
-                pickup = PickupTaskModel(
-                    order_id=order.id,
-                    needs_inspection=True,
-                    status=TaskStatus.PENDING,
-                )
-                db.add(pickup)
-            await update_order_status(db, order, OrderStatus.PICKUP)
+        item = await get_order_item(db, task.order_item_id)
+        if item and not item.pickup_task:
+            from app.models.order import PickupTask as PickupModel
+            db.add(PickupModel(
+                order_item_id=item.id,
+                needs_inspection=True,
+                status=TaskStatus.PENDING,
+            ))
+        await _update_item_and_order_status(db, task.order_item_id, OrderStatus.PICKUP)
 
     task = await update_selection_task(db, task, **updates)
     return task
@@ -127,10 +138,8 @@ async def update_pickup(
         updates["picker_id"] = current_user.id
 
     if data.status == TaskStatus.COMPLETED:
-        order = await get_order_by_id(db, task.order_id)
-        if order:
-            await create_delivery_task(db, order.id)
-            await update_order_status(db, order, OrderStatus.DELIVERY)
+        await create_delivery_task(db, task.order_item_id)
+        await _update_item_and_order_status(db, task.order_item_id, OrderStatus.DELIVERY)
 
     task = await update_pickup_task(db, task, **updates)
     return task
@@ -175,9 +184,7 @@ async def update_delivery(
         updates["picker_id"] = current_user.id
 
     if data.status == TaskStatus.COMPLETED:
-        order = await get_order_by_id(db, task.order_id)
-        if order:
-            await update_order_status(db, order, OrderStatus.CLOSED)
+        await _update_item_and_order_status(db, task.order_item_id, OrderStatus.CLOSED)
 
     task = await update_delivery_task(db, task, **updates)
     return task

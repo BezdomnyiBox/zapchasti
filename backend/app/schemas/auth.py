@@ -18,7 +18,7 @@ class UserCreate(BaseModel):
 
 class UserLogin(BaseModel):
     """Логин (по username или email)."""
-    username: str  # может быть email или username
+    username: str
     password: str
 
 
@@ -27,10 +27,36 @@ class UserResponse(BaseModel):
     id: int
     email: str
     username: str
+    phone: str | None = None
     role: UserRole
     is_active: bool
 
     model_config = {"from_attributes": True}
+
+
+class UserProfileUpdate(BaseModel):
+    """Обновление профиля (телефон)."""
+    phone: str | None = Field(None, max_length=20)
+
+
+class PickerProfileResponse(BaseModel):
+    """Наценки подборщика."""
+    selection_price: float | None = None
+    inspection_price: float | None = None
+    purchase_price: float | None = None
+    delivery_small_price: float | None = None
+    delivery_large_price: float | None = None
+
+    model_config = {"from_attributes": True}
+
+
+class PickerProfileUpdate(BaseModel):
+    """Обновление наценок подборщика."""
+    selection_price: float | None = Field(None, ge=0)
+    inspection_price: float | None = Field(None, ge=0)
+    purchase_price: float | None = Field(None, ge=0)
+    delivery_small_price: float | None = Field(None, ge=0)
+    delivery_large_price: float | None = Field(None, ge=0)
 
 
 class TokenPair(BaseModel):
@@ -42,9 +68,9 @@ class TokenPair(BaseModel):
 
 class TokenPayload(BaseModel):
     """Полезная нагрузка JWT (sub, role и т.д.)."""
-    sub: int  # user id
+    sub: int
     role: str
-    type: str  # access | refresh
+    type: str
 
 
 class RefreshTokenRequest(BaseModel):

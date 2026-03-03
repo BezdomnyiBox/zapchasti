@@ -18,13 +18,13 @@ export async function getOrder(id: number): Promise<Order> {
 
 export async function uploadPhoto(
   file: File,
-  orderId: number,
+  orderItemId: number,
   taskType?: "selection" | "pickup",
   taskId?: number,
 ): Promise<{ id: number; file_url: string }> {
   const form = new FormData();
   form.append("file", file);
-  form.append("order_id", String(orderId));
+  form.append("order_item_id", String(orderItemId));
   if (taskType === "selection" && taskId) form.append("selection_task_id", String(taskId));
   if (taskType === "pickup" && taskId) form.append("pickup_task_id", String(taskId));
   const { data } = await api.post<{ id: number; file_url: string }>("/media", form);

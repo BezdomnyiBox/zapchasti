@@ -2,13 +2,10 @@ import logging
 import traceback
 from contextlib import asynccontextmanager
 
-import redis.asyncio as aioredis
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi_limiter import FastAPILimiter
 
-from app.core.config import settings
 from app.core.database import engine, Base
 from app.api.router import router
 from app.models import User  # noqa: F401 — регистрируем модели
@@ -20,12 +17,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(application: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    redis_connection = aioredis.from_url(
-        settings.REDIS_URL, encoding="utf-8", decode_responses=True
-    )
-    await FastAPILimiter.init(redis_connection)
     yield
-    await redis_connection.aclose()
 
 
 app = FastAPI(lifespan=lifespan)

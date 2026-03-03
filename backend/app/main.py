@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.core.database import engine, Base
 from app.api.router import router
-from app.models import User  # noqa: F401 — регистрируем модели
+from app.models import User, Order, SelectionTask, PickupTask, DeliveryTask, OrderPhoto  # noqa: F401
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +17,11 @@ logger = logging.getLogger(__name__)
 async def lifespan(application: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    try:
+        from app.core.s3 import ensure_bucket
+        ensure_bucket()
+    except Exception as e:
+        logger.warning("S3 bucket check skipped: %s", e)
     yield
 
 

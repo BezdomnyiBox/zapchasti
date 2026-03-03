@@ -12,6 +12,7 @@ def _utcnow() -> datetime:
 
 class UserRole(str, enum.Enum):
     USER = "user"
+    PICKER = "picker"
     ADMIN = "admin"
 
 

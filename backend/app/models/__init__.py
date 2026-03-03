@@ -1,20 +1,10 @@
-from app.models.user import User, PickerProfile
-from app.models.order import (
-    Order,
-    OrderItem,
-    SelectionTask,
-    PickupTask,
-    DeliveryTask,
-    OrderPhoto,
-)
+from app.models.user import User, CourierProfile
+from app.models.order import Order, OrderPhoto, Review
 
 __all__ = [
     "User",
-    "PickerProfile",
+    "CourierProfile",
     "Order",
-    "OrderItem",
-    "SelectionTask",
-    "PickupTask",
-    "DeliveryTask",
     "OrderPhoto",
+    "Review",
 ]

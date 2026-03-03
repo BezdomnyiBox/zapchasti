@@ -2,121 +2,58 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.order import (
-    Order, OrderItem, OrderStatus,
-    SelectionTask, PickupTask, DeliveryTask, OrderPhoto, TaskStatus,
-)
-from app.schemas.order import OrderCreate
-
-
-# ── helpers for eager-loading items → tasks → photos ──────
-
-def _item_load_options():
-    return [
-        selectinload(OrderItem.selection_task).selectinload(SelectionTask.photos),
-        selectinload(OrderItem.pickup_task).selectinload(PickupTask.photos),
-        selectinload(OrderItem.delivery_task),
-        selectinload(OrderItem.photos),
-    ]
+from app.models.order import Order, OrderPhoto, OrderStatus, Review
+from app.schemas.order import OrderCreate, ReviewCreate
 
 
 def _order_load_options():
     return [
-        selectinload(Order.items).options(*_item_load_options()),
+        selectinload(Order.photos),
+        selectinload(Order.review),
     ]
 
 
 # ── Orders ────────────────────────────────────────────────
 
 async def create_order(db: AsyncSession, client_id: int, data: OrderCreate) -> Order:
-    order = Order(client_id=client_id, comment=data.comment, status=OrderStatus.NEW)
+    service_fee = 500.0
+    delivery_fee = 300.0
+    part_price = data.part_price or 0
+    total = part_price + service_fee + delivery_fee
+
+    order = Order(
+        client_id=client_id,
+        description=data.description,
+        drom_url=data.drom_url,
+        car_brand=data.car_brand,
+        car_model=data.car_model,
+        car_year=data.car_year,
+        body_type=data.body_type,
+        part_name=data.part_name,
+        part_number=data.part_number,
+        seller_address=data.seller_address,
+        seller_lat=data.seller_lat,
+        seller_lng=data.seller_lng,
+        delivery_address=data.delivery_address,
+        delivery_lat=data.delivery_lat,
+        delivery_lng=data.delivery_lng,
+        part_price=data.part_price,
+        service_fee=service_fee,
+        delivery_fee=delivery_fee,
+        total_price=total,
+        cargo_size=data.cargo_size,
+        comment=data.comment,
+        status=OrderStatus.WAITING_COURIER,
+    )
     db.add(order)
-    await db.flush()
-
-    items: list[OrderItem] = []
-    for item_data in data.items:
-        has_drom = bool(item_data.drom_url)
-        initial_status = OrderStatus.PICKUP if has_drom else OrderStatus.SELECTION
-
-        item = OrderItem(
-            order_id=order.id,
-            drom_url=item_data.drom_url,
-            description=item_data.description,
-            car_brand=item_data.car_brand,
-            car_model=item_data.car_model,
-            car_year=item_data.car_year,
-            body_type=item_data.body_type,
-            part_name=item_data.part_name,
-            part_number=item_data.part_number,
-            target_price=item_data.target_price,
-            comment=item_data.comment,
-            prepaid_to_seller=item_data.prepaid_to_seller,
-            cargo_size=item_data.cargo_size,
-            status=initial_status,
-        )
-        db.add(item)
-        await db.flush()
-        items.append(item)
-
-        if not has_drom:
-            db.add(SelectionTask(order_item_id=item.id, status=TaskStatus.PENDING))
-        else:
-            needs_inspection = not item_data.prepaid_to_seller
-            db.add(PickupTask(
-                order_item_id=item.id,
-                needs_inspection=needs_inspection,
-                status=TaskStatus.PENDING,
-            ))
-
-    _sync_order_status_from_items(order, items)
     await db.commit()
     await db.refresh(order)
     return order
 
 
-def _sync_order_status_from_items(order: Order, items: list[OrderItem]) -> None:
-    """Derive order-level status from items. Call before commit (avoids lazy load)."""
-    if not items:
-        return
-    statuses = [it.status for it in items]
-    if all(s == OrderStatus.CLOSED for s in statuses):
-        order.status = OrderStatus.CLOSED
-    elif all(s == OrderStatus.CANCELLED for s in statuses):
-        order.status = OrderStatus.CANCELLED
-    elif any(s == OrderStatus.DELIVERY for s in statuses):
-        order.status = OrderStatus.DELIVERY
-    elif any(s == OrderStatus.PICKUP for s in statuses):
-        order.status = OrderStatus.PICKUP
-    elif any(s == OrderStatus.SELECTION for s in statuses):
-        order.status = OrderStatus.SELECTION
-    else:
-        order.status = OrderStatus.NEW
-
-
-def _sync_order_status(order: Order) -> None:
-    """Derive order-level status from items. Requires order.items already loaded."""
-    if not order.items:
-        return
-    statuses = [it.status for it in order.items]
-    if all(s == OrderStatus.CLOSED for s in statuses):
-        order.status = OrderStatus.CLOSED
-    elif all(s == OrderStatus.CANCELLED for s in statuses):
-        order.status = OrderStatus.CANCELLED
-    elif any(s == OrderStatus.DELIVERY for s in statuses):
-        order.status = OrderStatus.DELIVERY
-    elif any(s == OrderStatus.PICKUP for s in statuses):
-        order.status = OrderStatus.PICKUP
-    elif any(s == OrderStatus.SELECTION for s in statuses):
-        order.status = OrderStatus.SELECTION
-    else:
-        order.status = OrderStatus.NEW
-
-
 async def get_order_by_id(db: AsyncSession, order_id: int) -> Order | None:
     result = await db.execute(
-        select(Order)
-        .options(*_order_load_options())
-        .where(Order.id == order_id)
+        select(Order).options(*_order_load_options()).where(Order.id == order_id)
     )
     return result.scalars().one_or_none()
 
@@ -124,175 +61,180 @@ async def get_order_by_id(db: AsyncSession, order_id: int) -> Order | None:
 async def get_orders_by_client(db: AsyncSession, client_id: int) -> list[Order]:
     result = await db.execute(
         select(Order)
-        .options(selectinload(Order.items))
         .where(Order.client_id == client_id)
         .order_by(Order.created_at.desc())
     )
     return list(result.scalars().all())
 
 
-async def get_all_orders(db: AsyncSession, status: OrderStatus | None = None) -> list[Order]:
-    query = (
-        select(Order)
-        .options(selectinload(Order.items))
-        .order_by(Order.created_at.desc())
-    )
+async def get_all_orders(
+    db: AsyncSession, status: OrderStatus | None = None,
+) -> list[Order]:
+    query = select(Order).order_by(Order.created_at.desc())
     if status:
         query = query.where(Order.status == status)
     result = await db.execute(query)
     return list(result.scalars().all())
 
 
-async def update_order_status(db: AsyncSession, order: Order, status: OrderStatus) -> Order:
-    order.status = status
+# ── Courier: available orders + accept ────────────────────
+
+async def get_available_for_courier(db: AsyncSession) -> list[Order]:
+    result = await db.execute(
+        select(Order)
+        .where(Order.status == OrderStatus.WAITING_COURIER)
+        .order_by(Order.created_at.asc())
+    )
+    return list(result.scalars().all())
+
+
+async def get_courier_orders(db: AsyncSession, courier_id: int) -> list[Order]:
+    result = await db.execute(
+        select(Order)
+        .where(Order.courier_id == courier_id)
+        .order_by(Order.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def courier_accept_order(
+    db: AsyncSession, order: Order, courier_id: int,
+) -> Order:
+    order.courier_id = courier_id
+    order.status = OrderStatus.COURIER_ASSIGNED
     await db.commit()
     await db.refresh(order)
     return order
 
 
-async def recalc_order_status(db: AsyncSession, order: Order) -> Order:
-    """Re-derive order status from its items and persist."""
-    _sync_order_status(order)
+async def courier_upload_done(db: AsyncSession, order: Order) -> Order:
+    order.status = OrderStatus.PHOTO_UPLOADED
     await db.commit()
     await db.refresh(order)
     return order
 
 
-# ── Order Item helpers ────────────────────────────────────
+async def courier_mark_picked_up(db: AsyncSession, order: Order) -> Order:
+    order.status = OrderStatus.PICKED_UP
+    await db.commit()
+    await db.refresh(order)
+    return order
 
-async def get_order_item(db: AsyncSession, item_id: int) -> OrderItem | None:
+
+async def courier_handoff_carrier(
+    db: AsyncSession, order: Order, carrier_id: int | None = None,
+) -> Order:
+    if carrier_id:
+        order.carrier_id = carrier_id
+    order.status = OrderStatus.HANDED_TO_CARRIER
+    await db.commit()
+    await db.refresh(order)
+    return order
+
+
+# ── Client actions ────────────────────────────────────────
+
+async def client_approve(db: AsyncSession, order: Order) -> Order:
+    order.status = OrderStatus.CONFIRMED
+    await db.commit()
+    await db.refresh(order)
+    return order
+
+
+async def client_reject(db: AsyncSession, order: Order) -> Order:
+    order.status = OrderStatus.CANCELLED
+    await db.commit()
+    await db.refresh(order)
+    return order
+
+
+async def client_confirm_delivery(db: AsyncSession, order: Order) -> Order:
+    order.status = OrderStatus.COMPLETED
+    await db.commit()
+    await db.refresh(order)
+    return order
+
+
+# ── Carrier ───────────────────────────────────────────────
+
+async def get_available_for_carrier(db: AsyncSession) -> list[Order]:
     result = await db.execute(
-        select(OrderItem)
-        .options(*_item_load_options())
-        .where(OrderItem.id == item_id)
+        select(Order)
+        .where(Order.status == OrderStatus.HANDED_TO_CARRIER, Order.carrier_id.is_(None))
+        .order_by(Order.created_at.asc())
     )
-    return result.scalars().one_or_none()
-
-
-# ── Selection tasks ───────────────────────────────────────
-
-async def get_selection_tasks(
-    db: AsyncSession, picker_id: int | None = None,
-) -> list[SelectionTask]:
-    query = select(SelectionTask).order_by(SelectionTask.created_at.desc())
-    if picker_id:
-        query = query.where(SelectionTask.picker_id == picker_id)
-    result = await db.execute(query)
     return list(result.scalars().all())
 
 
-async def get_selection_task(db: AsyncSession, task_id: int) -> SelectionTask | None:
+async def get_carrier_orders(db: AsyncSession, carrier_id: int) -> list[Order]:
     result = await db.execute(
-        select(SelectionTask)
-        .options(selectinload(SelectionTask.photos))
-        .where(SelectionTask.id == task_id)
+        select(Order)
+        .where(Order.carrier_id == carrier_id)
+        .order_by(Order.created_at.desc())
     )
-    return result.scalars().one_or_none()
-
-
-async def update_selection_task(
-    db: AsyncSession, task: SelectionTask, **kwargs,
-) -> SelectionTask:
-    for key, value in kwargs.items():
-        if value is not None:
-            setattr(task, key, value)
-    await db.commit()
-    await db.refresh(task)
-    return task
-
-
-# ── Pickup tasks ──────────────────────────────────────────
-
-async def get_pickup_tasks(
-    db: AsyncSession, picker_id: int | None = None,
-) -> list[PickupTask]:
-    query = select(PickupTask).order_by(PickupTask.created_at.desc())
-    if picker_id:
-        query = query.where(PickupTask.picker_id == picker_id)
-    result = await db.execute(query)
     return list(result.scalars().all())
 
 
-async def get_pickup_task(db: AsyncSession, task_id: int) -> PickupTask | None:
-    result = await db.execute(
-        select(PickupTask)
-        .options(selectinload(PickupTask.photos))
-        .where(PickupTask.id == task_id)
-    )
-    return result.scalars().one_or_none()
-
-
-async def update_pickup_task(
-    db: AsyncSession, task: PickupTask, **kwargs,
-) -> PickupTask:
-    for key, value in kwargs.items():
-        if value is not None:
-            setattr(task, key, value)
+async def carrier_accept_order(
+    db: AsyncSession, order: Order, carrier_id: int,
+) -> Order:
+    order.carrier_id = carrier_id
     await db.commit()
-    await db.refresh(task)
-    return task
+    await db.refresh(order)
+    return order
 
 
-# ── Delivery tasks ────────────────────────────────────────
-
-async def create_delivery_task(
-    db: AsyncSession, order_item_id: int, **kwargs,
-) -> DeliveryTask:
-    task = DeliveryTask(order_item_id=order_item_id, status=TaskStatus.PENDING, **kwargs)
-    db.add(task)
+async def carrier_mark_delivered(db: AsyncSession, order: Order) -> Order:
+    order.status = OrderStatus.COMPLETED
     await db.commit()
-    await db.refresh(task)
-    return task
-
-
-async def get_delivery_tasks(
-    db: AsyncSession, picker_id: int | None = None,
-) -> list[DeliveryTask]:
-    query = select(DeliveryTask).order_by(DeliveryTask.created_at.desc())
-    if picker_id:
-        query = query.where(DeliveryTask.picker_id == picker_id)
-    result = await db.execute(query)
-    return list(result.scalars().all())
-
-
-async def get_delivery_task(db: AsyncSession, task_id: int) -> DeliveryTask | None:
-    result = await db.execute(
-        select(DeliveryTask).where(DeliveryTask.id == task_id)
-    )
-    return result.scalars().one_or_none()
-
-
-async def update_delivery_task(
-    db: AsyncSession, task: DeliveryTask, **kwargs,
-) -> DeliveryTask:
-    for key, value in kwargs.items():
-        if value is not None:
-            setattr(task, key, value)
-    await db.commit()
-    await db.refresh(task)
-    return task
+    await db.refresh(order)
+    return order
 
 
 # ── Photos ────────────────────────────────────────────────
 
 async def create_photo(
     db: AsyncSession,
-    order_item_id: int,
+    order_id: int,
     file_key: str,
     file_url: str,
     uploaded_by: int,
-    selection_task_id: int | None = None,
-    pickup_task_id: int | None = None,
 ) -> OrderPhoto:
     photo = OrderPhoto(
-        order_item_id=order_item_id,
+        order_id=order_id,
         file_key=file_key,
         file_url=file_url,
         uploaded_by=uploaded_by,
-        selection_task_id=selection_task_id,
-        pickup_task_id=pickup_task_id,
     )
     db.add(photo)
     await db.commit()
     await db.refresh(photo)
     return photo
+
+
+# ── Reviews ───────────────────────────────────────────────
+
+async def create_review(
+    db: AsyncSession, order_id: int, client_id: int, data: ReviewCreate,
+) -> Review:
+    review = Review(
+        order_id=order_id,
+        client_id=client_id,
+        courier_rating=data.courier_rating,
+        service_rating=data.service_rating,
+        comment=data.comment,
+    )
+    db.add(review)
+    await db.commit()
+    await db.refresh(review)
+    return review
+
+
+async def get_reviews_for_courier(db: AsyncSession, courier_id: int) -> list[Review]:
+    result = await db.execute(
+        select(Review)
+        .join(Order, Review.order_id == Order.id)
+        .where(Order.courier_id == courier_id)
+        .order_by(Review.created_at.desc())
+    )
+    return list(result.scalars().all())

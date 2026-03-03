@@ -1,44 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
-import { getOrder } from "../services/orders";
-import type { Order, OrderItem, OrderStatus, TaskStatus, CargoSize } from "../types/order";
+import { AuthContext } from "../context/AuthContext";
+import { getOrder, approveOrder, rejectOrder, confirmDelivery, submitReview } from "../services/orders";
+import type { Order, OrderStatus, CargoSize } from "../types/order";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  new: "Новый",
-  selection: "Подбор",
-  pickup: "Забор",
-  delivery: "Доставка",
-  closed: "Завершён",
-  cancelled: "Отменён",
-};
-
-const TASK_LABELS: Record<TaskStatus, string> = {
-  pending: "Ожидает",
-  in_progress: "В работе",
-  waiting_client: "Ждёт подтверждения",
-  approved: "Подтверждён",
-  rejected: "Отклонён",
-  completed: "Завершён",
-  cancelled: "Отменён",
-};
-
-const TASK_COLORS: Record<TaskStatus, string> = {
-  pending: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",
-  in_progress: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  waiting_client: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  approved: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  rejected: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  completed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  cancelled: "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
+  waiting_courier: "Ожидает курьера",
+  courier_assigned: "Курьер назначен",
+  photo_uploaded: "Фото готовы — просмотрите",
+  confirmed: "Подтверждён",
+  picked_up: "Запчасть у курьера",
+  handed_to_carrier: "Передано перевозчику",
+  completed: "Заказ завершён",
+  cancelled: "Заказ отменён",
 };
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
-  new: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  selection: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  pickup: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  delivery: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  closed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  waiting_courier: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  courier_assigned: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
+  photo_uploaded: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  confirmed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  picked_up: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+  handed_to_carrier: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+  completed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   cancelled: "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
 };
 
@@ -47,127 +32,19 @@ const CARGO_LABELS: Record<CargoSize, string> = {
   large: "Крупногабарит",
 };
 
-function ItemCard({ item, idx }: { item: OrderItem; idx: number }) {
-  const sectionCls = "bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5";
-  const label = item.drom_url
-    ? "Ссылка Drom"
-    : [item.car_brand, item.car_model, item.car_year].filter(Boolean).join(" ") || item.part_name || "Позиция";
-
-  return (
-    <div className={sectionCls}>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-medium text-slate-800 dark:text-slate-100">
-          #{idx + 1} — {label}
-        </h3>
-        <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS[item.status]}`}>
-          {STATUS_LABELS[item.status]}
-        </span>
-      </div>
-
-      <dl className="space-y-1.5 text-sm mb-4">
-        {item.drom_url && (
-          <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-28">Drom:</dt>
-            <dd>
-              <a href={item.drom_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline break-all">
-                {item.drom_url}
-              </a>
-            </dd>
-          </div>
-        )}
-        {item.car_brand && (
-          <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-28">Авто:</dt>
-            <dd className="text-slate-800 dark:text-slate-200">
-              {[item.car_brand, item.car_model, item.car_year].filter(Boolean).join(" ")}
-            </dd>
-          </div>
-        )}
-        {item.body_type && (
-          <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-28">Кузов:</dt>
-            <dd className="text-slate-800 dark:text-slate-200">{item.body_type}</dd>
-          </div>
-        )}
-        {item.part_name && (
-          <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-28">Деталь:</dt>
-            <dd className="text-slate-800 dark:text-slate-200">
-              {item.part_name}{item.part_number ? ` (${item.part_number})` : ""}
-            </dd>
-          </div>
-        )}
-        {item.description && (
-          <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-28">Описание:</dt>
-            <dd className="text-slate-800 dark:text-slate-200">{item.description}</dd>
-          </div>
-        )}
-        {item.target_price != null && (
-          <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-28">Цена:</dt>
-            <dd className="text-slate-800 dark:text-slate-200">{item.target_price.toLocaleString("ru-RU")} ₽</dd>
-          </div>
-        )}
-        <div className="flex gap-2">
-          <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-28">Тип груза:</dt>
-          <dd className="text-slate-800 dark:text-slate-200">{CARGO_LABELS[item.cargo_size]}</dd>
-        </div>
-        {item.comment && (
-          <div className="flex gap-2">
-            <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-28">Комментарий:</dt>
-            <dd className="text-slate-800 dark:text-slate-200">{item.comment}</dd>
-          </div>
-        )}
-      </dl>
-
-      {/* Tasks */}
-      <div className="space-y-3 border-t border-slate-200 dark:border-slate-700 pt-3">
-        {item.selection_task && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600 dark:text-slate-400">Подбор</span>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${TASK_COLORS[item.selection_task.status]}`}>
-              {TASK_LABELS[item.selection_task.status]}
-            </span>
-          </div>
-        )}
-        {item.pickup_task && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600 dark:text-slate-400">Забор / осмотр</span>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${TASK_COLORS[item.pickup_task.status]}`}>
-              {TASK_LABELS[item.pickup_task.status]}
-            </span>
-          </div>
-        )}
-        {item.delivery_task && (
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-600 dark:text-slate-400">Доставка</span>
-            <span className={`px-2 py-0.5 rounded text-xs font-medium ${TASK_COLORS[item.delivery_task.status]}`}>
-              {TASK_LABELS[item.delivery_task.status]}
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Photos for this item */}
-      {item.photos.length > 0 && (
-        <div className="flex gap-2 flex-wrap mt-3 border-t border-slate-200 dark:border-slate-700 pt-3">
-          {item.photos.map((p) => (
-            <a key={p.id} href={p.file_url} target="_blank" rel="noopener noreferrer">
-              <img src={p.file_url} alt="" className="h-20 w-20 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
-            </a>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function OrderDetail() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
+  const auth = useContext(AuthContext);
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
+  const [acting, setActing] = useState(false);
+
+  const [courierRating, setCourierRating] = useState(5);
+  const [serviceRating, setServiceRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+
+  const isClient = order?.client_id === auth?.user?.id;
 
   useEffect(() => {
     if (!orderId) return;
@@ -177,54 +54,233 @@ export default function OrderDetail() {
       .finally(() => setLoading(false));
   }, [orderId]);
 
+  const handleApprove = async () => {
+    if (!order) return;
+    setActing(true);
+    try {
+      const updated = await approveOrder(order.id);
+      setOrder(updated);
+      toast.success("Покупка подтверждена");
+    } catch { toast.error("Ошибка"); }
+    finally { setActing(false); }
+  };
+
+  const handleReject = async () => {
+    if (!order) return;
+    setActing(true);
+    try {
+      const updated = await rejectOrder(order.id);
+      setOrder(updated);
+      toast.success("Заказ отменён, средства вернутся");
+    } catch { toast.error("Ошибка"); }
+    finally { setActing(false); }
+  };
+
+  const handleConfirmDelivery = async () => {
+    if (!order) return;
+    setActing(true);
+    try {
+      const updated = await confirmDelivery(order.id);
+      setOrder(updated);
+      toast.success("Получение подтверждено");
+    } catch { toast.error("Ошибка"); }
+    finally { setActing(false); }
+  };
+
+  const handleReview = async () => {
+    if (!order) return;
+    setActing(true);
+    try {
+      await submitReview(order.id, {
+        courier_rating: courierRating,
+        service_rating: serviceRating,
+        comment: reviewComment.trim() || null,
+      });
+      const updated = await getOrder(order.id);
+      setOrder(updated);
+      toast.success("Спасибо за отзыв!");
+    } catch { toast.error("Ошибка"); }
+    finally { setActing(false); }
+  };
+
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-500">
-        Загрузка…
-      </div>
-    );
+    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-500">Загрузка…</div>;
+  }
+  if (!order) {
+    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900"><p className="text-slate-500">Заказ не найден</p></div>;
   }
 
-  if (!order) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900">
-        <p className="text-slate-500">Заказ не найден</p>
-      </div>
-    );
-  }
+  const sectionCls = "bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5";
+  const btnPrimary = "px-5 py-2.5 rounded-xl font-medium text-white transition disabled:opacity-60 disabled:cursor-not-allowed";
+  const inputCls = "w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 transition";
+
+  const label = order.part_name || (order.drom_url ? "Ссылка Drom" : [order.car_brand, order.car_model, order.car_year].filter(Boolean).join(" ") || "Запчасть");
 
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900 px-4 py-8">
       <div className="mx-auto max-w-2xl">
-        <button
-          onClick={() => navigate("/client")}
-          className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition mb-4"
-        >
-          &larr; Назад к заявкам
+        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition mb-4">
+          &larr; Назад
         </button>
 
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
-            Заявка #{order.id}
+            Заказ #{order.id}
           </h1>
           <span className={`px-3 py-1 rounded-lg text-sm font-medium ${STATUS_COLORS[order.status]}`}>
             {STATUS_LABELS[order.status]}
           </span>
         </div>
 
-        {order.comment && (
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-            Комментарий: {order.comment}
-          </p>
-        )}
-        <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
-          Создан: {new Date(order.created_at).toLocaleString("ru-RU")}
-        </p>
-
         <div className="space-y-4">
-          {order.items.map((item, idx) => (
-            <ItemCard key={item.id} item={item} idx={idx} />
-          ))}
+          {/* Part info */}
+          <div className={sectionCls}>
+            <h2 className="font-medium text-slate-800 dark:text-slate-100 mb-3">{label}</h2>
+            <dl className="space-y-1.5 text-sm">
+              {order.drom_url && (
+                <div className="flex gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Drom:</dt>
+                  <dd><a href={order.drom_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline break-all">{order.drom_url}</a></dd>
+                </div>
+              )}
+              {order.car_brand && (
+                <div className="flex gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Авто:</dt>
+                  <dd className="text-slate-800 dark:text-slate-200">{[order.car_brand, order.car_model, order.car_year].filter(Boolean).join(" ")}</dd>
+                </div>
+              )}
+              {order.part_name && (
+                <div className="flex gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Деталь:</dt>
+                  <dd className="text-slate-800 dark:text-slate-200">{order.part_name}{order.part_number ? ` (${order.part_number})` : ""}</dd>
+                </div>
+              )}
+              {order.description && (
+                <div className="flex gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Описание:</dt>
+                  <dd className="text-slate-800 dark:text-slate-200">{order.description}</dd>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Тип груза:</dt>
+                <dd className="text-slate-800 dark:text-slate-200">{CARGO_LABELS[order.cargo_size]}</dd>
+              </div>
+              {order.seller_address && (
+                <div className="flex gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Продавец:</dt>
+                  <dd className="text-slate-800 dark:text-slate-200">{order.seller_address}</dd>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Доставка:</dt>
+                <dd className="text-slate-800 dark:text-slate-200">{order.delivery_address}</dd>
+              </div>
+              {order.comment && (
+                <div className="flex gap-2">
+                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Комментарий:</dt>
+                  <dd className="text-slate-800 dark:text-slate-200">{order.comment}</dd>
+                </div>
+              )}
+            </dl>
+          </div>
+
+          {/* Pricing */}
+          {order.total_price != null && (
+            <div className={sectionCls}>
+              <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-2">Стоимость</h3>
+              <div className="text-sm space-y-1">
+                {order.part_price != null && <p className="text-slate-600 dark:text-slate-400">Запчасть: {order.part_price.toLocaleString("ru-RU")} ₽</p>}
+                {order.service_fee != null && <p className="text-slate-600 dark:text-slate-400">Сервисный сбор: {order.service_fee.toLocaleString("ru-RU")} ₽</p>}
+                {order.delivery_fee != null && <p className="text-slate-600 dark:text-slate-400">Доставка: {order.delivery_fee.toLocaleString("ru-RU")} ₽</p>}
+                <p className="font-semibold text-slate-800 dark:text-slate-100 pt-1 border-t border-slate-200 dark:border-slate-700">
+                  Итого: {order.total_price.toLocaleString("ru-RU")} ₽
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Photos from courier (stage 3) */}
+          {order.photos.length > 0 && (
+            <div className={sectionCls}>
+              <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-3">Фото от курьера</h3>
+              <div className="flex gap-2 flex-wrap">
+                {order.photos.map((p) => (
+                  <a key={p.id} href={p.file_url} target="_blank" rel="noopener noreferrer">
+                    <img src={p.file_url} alt="" className="h-24 w-24 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Stage 4: Client decision */}
+          {isClient && order.status === "photo_uploaded" && (
+            <div className={`${sectionCls} border-amber-300 dark:border-amber-600`}>
+              <h3 className="font-medium text-amber-700 dark:text-amber-300 mb-3">Просмотрите фото и примите решение</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                Курьер сфотографировал запчасть. Если всё устраивает — подтвердите покупку.
+                Если нет — откажитесь, и средства будут возвращены.
+              </p>
+              <div className="flex gap-3">
+                <button onClick={handleApprove} disabled={acting} className={`${btnPrimary} bg-green-600 hover:bg-green-500`}>
+                  Подтвердить покупку
+                </button>
+                <button onClick={handleReject} disabled={acting} className={`${btnPrimary} bg-red-600 hover:bg-red-500`}>
+                  Отказаться
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Stage 7: Confirm delivery */}
+          {isClient && order.status === "handed_to_carrier" && (
+            <div className={`${sectionCls} border-indigo-300 dark:border-indigo-600`}>
+              <h3 className="font-medium text-indigo-700 dark:text-indigo-300 mb-3">Запчасть доставлена?</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                Перевозчик должен был доставить вашу запчасть. Подтвердите получение.
+              </p>
+              <button onClick={handleConfirmDelivery} disabled={acting} className={`${btnPrimary} bg-indigo-600 hover:bg-indigo-500`}>
+                Подтвердить получение
+              </button>
+            </div>
+          )}
+
+          {/* Stage 8: Review */}
+          {isClient && order.status === "completed" && !order.review && (
+            <div className={`${sectionCls} border-green-300 dark:border-green-600`}>
+              <h3 className="font-medium text-green-700 dark:text-green-300 mb-3">Оцените заказ</h3>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Оценка курьера (1–5)</label>
+                  <input type="number" min={1} max={5} value={courierRating} onChange={(e) => setCourierRating(Number(e.target.value))} className={inputCls} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Оценка сервиса (1–5)</label>
+                  <input type="number" min={1} max={5} value={serviceRating} onChange={(e) => setServiceRating(Number(e.target.value))} className={inputCls} />
+                </div>
+                <textarea placeholder="Ваш отзыв…" value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} rows={2} className={inputCls + " resize-none"} />
+                <button onClick={handleReview} disabled={acting} className={`${btnPrimary} bg-green-600 hover:bg-green-500`}>
+                  Отправить отзыв
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Show existing review */}
+          {order.review && (
+            <div className={sectionCls}>
+              <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-2">Ваш отзыв</h3>
+              <div className="text-sm space-y-1 text-slate-600 dark:text-slate-400">
+                <p>Курьер: {"★".repeat(order.review.courier_rating)}{"☆".repeat(5 - order.review.courier_rating)}</p>
+                <p>Сервис: {"★".repeat(order.review.service_rating)}{"☆".repeat(5 - order.review.service_rating)}</p>
+                {order.review.comment && <p className="mt-1 italic">"{order.review.comment}"</p>}
+              </div>
+            </div>
+          )}
+
+          <p className="text-xs text-slate-400 dark:text-slate-500">
+            Создан: {new Date(order.created_at).toLocaleString("ru-RU")}
+          </p>
         </div>
       </div>
     </div>

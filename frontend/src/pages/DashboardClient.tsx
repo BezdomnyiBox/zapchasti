@@ -5,20 +5,24 @@ import { getOrders } from "../services/orders";
 import type { OrderListItem, OrderStatus } from "../types/order";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
-  new: "Новый",
-  selection: "Подбор",
-  pickup: "Забор",
-  delivery: "Доставка",
-  closed: "Завершён",
+  waiting_courier: "Ожидает курьера",
+  courier_assigned: "Курьер назначен",
+  photo_uploaded: "Фото готовы",
+  confirmed: "Подтверждён",
+  picked_up: "У курьера",
+  handed_to_carrier: "У перевозчика",
+  completed: "Завершён",
   cancelled: "Отменён",
 };
 
 const STATUS_COLORS: Record<OrderStatus, string> = {
-  new: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  selection: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  pickup: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  delivery: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  closed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
+  waiting_courier: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  courier_assigned: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
+  photo_uploaded: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  confirmed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  picked_up: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
+  handed_to_carrier: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
+  completed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   cancelled: "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
 };
 
@@ -38,7 +42,7 @@ export default function DashboardClient() {
     <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
       <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-4">
         <div className="mx-auto max-w-3xl flex items-center justify-between">
-          <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Мои заявки</h1>
+          <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Мои заказы</h1>
           <div className="flex items-center gap-3">
             <Link
               to="/profile"
@@ -62,7 +66,7 @@ export default function DashboardClient() {
           to="/client/new"
           className="mb-6 inline-flex items-center gap-2 py-2.5 px-5 rounded-xl font-medium text-white bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 transition"
         >
-          + Новая заявка
+          + Новый заказ
         </Link>
 
         {loading && (
@@ -71,8 +75,8 @@ export default function DashboardClient() {
 
         {!loading && orders.length === 0 && (
           <div className="mt-12 text-center">
-            <p className="text-slate-500 dark:text-slate-400 mb-2">Заявок пока нет</p>
-            <p className="text-sm text-slate-400 dark:text-slate-500">Создайте первую заявку, чтобы начать</p>
+            <p className="text-slate-500 dark:text-slate-400 mb-2">Заказов пока нет</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500">Создайте первый заказ, чтобы начать</p>
           </div>
         )}
 
@@ -86,11 +90,13 @@ export default function DashboardClient() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
-                    Заявка #{o.id}
+                    Заказ #{o.id} — {o.part_name || o.drom_url || "Запчасть"}
                   </p>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
-                    {o.items_count} {o.items_count === 1 ? "позиция" : o.items_count < 5 ? "позиции" : "позиций"}
-                  </p>
+                  {o.total_price != null && (
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                      {o.total_price.toLocaleString("ru-RU")} ₽
+                    </p>
+                  )}
                 </div>
                 <span className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium ${STATUS_COLORS[o.status]}`}>
                   {STATUS_LABELS[o.status]}

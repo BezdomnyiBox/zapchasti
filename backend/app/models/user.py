@@ -11,8 +11,9 @@ def _utcnow() -> datetime:
 
 
 class UserRole(str, enum.Enum):
-    USER = "user"
-    PICKER = "picker"
+    CLIENT = "client"
+    COURIER = "courier"
+    CARRIER = "carrier"
     ADMIN = "admin"
 
 
@@ -25,18 +26,18 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     phone: Mapped[str | None] = mapped_column(String(20), nullable=True)
     role: Mapped[UserRole] = mapped_column(
-        Enum(UserRole, values_callable=lambda x: [e.name for e in x]),
-        default=UserRole.USER, nullable=False
+        Enum(UserRole, values_callable=lambda x: [e.value for e in x]),
+        default=UserRole.CLIENT, nullable=False,
     )
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, nullable=False
+        DateTime(timezone=True), default=_utcnow, nullable=False,
     )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False
+        DateTime(timezone=True), default=_utcnow, onupdate=_utcnow, nullable=False,
     )
 
-    picker_profile: Mapped["PickerProfile | None"] = relationship(
+    courier_profile: Mapped["CourierProfile | None"] = relationship(
         back_populates="user", uselist=False, lazy="selectin",
     )
 
@@ -44,17 +45,15 @@ class User(Base):
         return f"<User(id={self.id}, username={self.username})>"
 
 
-class PickerProfile(Base):
-    __tablename__ = "picker_profiles"
+class CourierProfile(Base):
+    __tablename__ = "courier_profiles"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False,
     )
-    selection_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    pickup_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
     inspection_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    purchase_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    delivery_small_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
-    delivery_large_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
+    delivery_price: Mapped[float | None] = mapped_column(Numeric(10, 2), nullable=True)
 
-    user: Mapped["User"] = relationship(back_populates="picker_profile")
+    user: Mapped["User"] = relationship(back_populates="courier_profile")

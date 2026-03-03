@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 export const TOKEN_KEY = "access_token";
 export const REFRESH_TOKEN_KEY = "refresh_token";
 
-export type UserRole = "user" | "picker" | "admin";
+export type UserRole = "client" | "courier" | "carrier" | "admin";
 
 export type User = {
   id: number;
@@ -19,7 +19,6 @@ export type User = {
 
 type AuthContextType = {
   user: User | null;
-  /** false пока идёт проверка токена при загрузке (не редиректить на логин) */
   isAuthReady: boolean;
   login: (username: string, password: string) => Promise<User | null>;
   register: (email: string, username: string, password: string) => Promise<User | null>;
@@ -86,7 +85,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { data } = await api.post<{ access_token: string; refresh_token: string }>(
           "/auth/login",
-          { username, password }
+          { username, password },
         );
         setToken(data.access_token, data.refresh_token);
         const u = await fetchMe();
@@ -101,7 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
     },
-    [setToken]
+    [setToken],
   );
 
   const register = useCallback(
@@ -109,7 +108,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { data } = await api.post<{ access_token: string; refresh_token: string }>(
           "/auth/register",
-          { email, username, password }
+          { email, username, password },
         );
         setToken(data.access_token, data.refresh_token);
         const u = await fetchMe();
@@ -124,7 +123,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return null;
       }
     },
-    [setToken]
+    [setToken],
   );
 
   const logout = useCallback(() => {

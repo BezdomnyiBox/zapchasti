@@ -1,16 +1,16 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_db, get_current_user_model, require_role
+from app.api.deps import get_db, get_current_user_model, require_exact_role
 from app.models.user import User
-from app.crud.user import update_user_phone, get_picker_profile, upsert_picker_profile
+from app.crud.user import update_user_phone, get_courier_profile, upsert_courier_profile
 from app.schemas.auth import (
     UserResponse,
     UserProfileUpdate,
-    PickerProfileResponse,
-    PickerProfileUpdate,
+    CourierProfileResponse,
+    CourierProfileUpdate,
 )
 
 router = APIRouter(prefix="/profile", tags=["profile"])
@@ -27,22 +27,22 @@ async def update_my_profile(
     return current_user
 
 
-@router.get("/picker", response_model=PickerProfileResponse)
-async def get_my_picker_profile(
+@router.get("/courier", response_model=CourierProfileResponse)
+async def get_my_courier_profile(
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(require_role("picker"))],
+    current_user: Annotated[User, Depends(require_exact_role("courier"))],
 ):
-    profile = await get_picker_profile(db, current_user.id)
+    profile = await get_courier_profile(db, current_user.id)
     if not profile:
-        return PickerProfileResponse()
+        return CourierProfileResponse()
     return profile
 
 
-@router.patch("/picker", response_model=PickerProfileResponse)
-async def update_my_picker_profile(
-    data: PickerProfileUpdate,
+@router.patch("/courier", response_model=CourierProfileResponse)
+async def update_my_courier_profile(
+    data: CourierProfileUpdate,
     db: Annotated[AsyncSession, Depends(get_db)],
-    current_user: Annotated[User, Depends(require_role("picker"))],
+    current_user: Annotated[User, Depends(require_exact_role("courier"))],
 ):
-    profile = await upsert_picker_profile(db, current_user.id, data)
+    profile = await upsert_courier_profile(db, current_user.id, data)
     return profile

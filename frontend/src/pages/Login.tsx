@@ -15,7 +15,10 @@ export default function Login() {
     setLoading(true);
     try {
       const u = await auth.login(username.trim(), password);
-      if (u) navigate(u.role === "user" ? "/client" : "/picker", { replace: true });
+      if (u) {
+        const dest = u.role === "courier" ? "/courier" : u.role === "carrier" ? "/carrier" : "/client";
+        navigate(dest, { replace: true });
+      }
     } finally {
       setLoading(false);
     }

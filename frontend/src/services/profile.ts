@@ -1,5 +1,5 @@
 import { api } from "./api";
-import type { PickerProfile } from "../types/order";
+import type { CourierProfile } from "../types/order";
 
 export interface UserProfileData {
   phone?: string | null;
@@ -19,12 +19,12 @@ export async function updateProfile(data: UserProfileData): Promise<UserResponse
   return user;
 }
 
-export async function getPickerProfile(): Promise<PickerProfile> {
-  const { data } = await api.get<PickerProfile>("/profile/picker");
+export async function getCourierProfile(): Promise<CourierProfile> {
+  const { data } = await api.get<CourierProfile>("/profile/courier");
   return data;
 }
 
-export async function updatePickerProfile(data: Partial<PickerProfile>): Promise<PickerProfile> {
-  const { data: profile } = await api.patch<PickerProfile>("/profile/picker", data);
+export async function updateCourierProfile(data: Partial<CourierProfile>): Promise<CourierProfile> {
+  const { data: profile } = await api.patch<CourierProfile>("/profile/courier", data);
   return profile;
 }

@@ -1,8 +1,8 @@
 from sqlalchemy import select, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.user import User, PickerProfile
-from app.schemas.auth import UserCreate, PickerProfileUpdate
+from app.models.user import User, CourierProfile
+from app.schemas.auth import UserCreate, CourierProfileUpdate
 from app.core.security import hash_password
 
 
@@ -22,9 +22,8 @@ async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
 
 
 async def get_user_by_username_or_email(
-    session: AsyncSession, username_or_email: str
+    session: AsyncSession, username_or_email: str,
 ) -> User | None:
-    """Поиск пользователя по username или по email (для логина) — один запрос."""
     result = await session.execute(
         select(User).where(
             or_(User.username == username_or_email, User.email == username_or_email)
@@ -53,21 +52,21 @@ async def update_user_phone(session: AsyncSession, user: User, phone: str | None
     return user
 
 
-# ── Picker profile ────────────────────────────────────────
+# ── Courier profile ──────────────────────────────────────
 
-async def get_picker_profile(session: AsyncSession, user_id: int) -> PickerProfile | None:
+async def get_courier_profile(session: AsyncSession, user_id: int) -> CourierProfile | None:
     result = await session.execute(
-        select(PickerProfile).where(PickerProfile.user_id == user_id)
+        select(CourierProfile).where(CourierProfile.user_id == user_id)
     )
     return result.scalars().one_or_none()
 
 
-async def upsert_picker_profile(
-    session: AsyncSession, user_id: int, data: PickerProfileUpdate,
-) -> PickerProfile:
-    profile = await get_picker_profile(session, user_id)
+async def upsert_courier_profile(
+    session: AsyncSession, user_id: int, data: CourierProfileUpdate,
+) -> CourierProfile:
+    profile = await get_courier_profile(session, user_id)
     if not profile:
-        profile = PickerProfile(user_id=user_id)
+        profile = CourierProfile(user_id=user_id)
         session.add(profile)
 
     for field, value in data.model_dump(exclude_unset=True).items():

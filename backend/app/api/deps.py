@@ -38,7 +38,6 @@ async def get_current_user_model(
     payload: Annotated[dict, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
 ) -> User:
-    """Текущий пользователь как модель из БД (для эндпоинтов, где нужны свежие данные)."""
     user_id = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -50,17 +49,28 @@ async def get_current_user_model(
     return user
 
 
-ROLE_HIERARCHY = {"user": 0, "picker": 1, "admin": 2}
+ROLE_HIERARCHY = {"client": 0, "courier": 1, "carrier": 1, "admin": 2}
 
 
 def require_role(required_role: str):
-    """Проверка роли из JWT payload. Роли иерархические: admin > picker > user."""
+    """Hierarchical role check. courier and carrier are at the same level."""
     async def role_checker(
         user: Annotated[User, Depends(get_current_user_model)],
     ) -> User:
         user_level = ROLE_HIERARCHY.get(user.role.value, 0)
         required_level = ROLE_HIERARCHY.get(required_role, 0)
         if user_level < required_level:
+            raise HTTPException(status_code=403, detail="Forbidden")
+        return user
+    return role_checker
+
+
+def require_exact_role(*roles: str):
+    """Require the user to have one of the exact specified roles (or admin)."""
+    async def role_checker(
+        user: Annotated[User, Depends(get_current_user_model)],
+    ) -> User:
+        if user.role.value not in roles and user.role.value != "admin":
             raise HTTPException(status_code=403, detail="Forbidden")
         return user
     return role_checker

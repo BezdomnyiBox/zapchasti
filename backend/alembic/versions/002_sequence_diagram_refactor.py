@@ -35,12 +35,17 @@ def upgrade() -> None:
     op.execute("DROP TYPE IF EXISTS cargosize")
     op.execute("DROP TYPE IF EXISTS order_item_status")
 
-    # --- 3. Update user role enum ---
-    op.execute("ALTER TABLE users ALTER COLUMN role DROP DEFAULT")
-    op.execute("DROP TYPE IF EXISTS userrole")
+    # --- 3. Update user role enum (rename trick to avoid dependent-object error) ---
+    op.execute("ALTER TYPE userrole RENAME TO userrole_old")
     op.execute("CREATE TYPE userrole AS ENUM ('client', 'courier', 'carrier', 'admin')")
-    op.execute("ALTER TABLE users ALTER COLUMN role TYPE userrole USING 'client'::userrole")
+    op.execute("ALTER TABLE users ALTER COLUMN role DROP DEFAULT")
+    op.execute("""
+        ALTER TABLE users
+            ALTER COLUMN role TYPE userrole
+            USING 'client'::userrole
+    """)
     op.execute("ALTER TABLE users ALTER COLUMN role SET DEFAULT 'client'")
+    op.execute("DROP TYPE userrole_old")
 
     # --- 4. Create courier_profiles ---
     op.create_table(

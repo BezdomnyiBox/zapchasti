@@ -45,7 +45,8 @@ class Order(Base):
     )
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[OrderStatus] = mapped_column(
-        Enum(OrderStatus), default=OrderStatus.NEW, nullable=False,
+        Enum(OrderStatus, values_callable=lambda x: [e.value for e in x]),
+        default=OrderStatus.NEW, nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False,
@@ -82,10 +83,12 @@ class OrderItem(Base):
     comment: Mapped[str | None] = mapped_column(Text, nullable=True)
     prepaid_to_seller: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     cargo_size: Mapped[CargoSize] = mapped_column(
-        Enum(CargoSize), default=CargoSize.SMALL, nullable=False,
+        Enum(CargoSize, values_callable=lambda x: [e.value for e in x]),
+        default=CargoSize.SMALL, nullable=False,
     )
     status: Mapped[OrderStatus] = mapped_column(
-        Enum(OrderStatus, name="order_item_status"), default=OrderStatus.NEW, nullable=False,
+        Enum(OrderStatus, name="order_item_status", values_callable=lambda x: [e.value for e in x]),
+        default=OrderStatus.NEW, nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False,
@@ -120,7 +123,8 @@ class SelectionTask(Base):
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True,
     )
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False,
+        Enum(TaskStatus, values_callable=lambda x: [e.value for e in x]),
+        default=TaskStatus.PENDING, nullable=False,
     )
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -152,7 +156,8 @@ class PickupTask(Base):
     seller_lng: Mapped[float | None] = mapped_column(Numeric(10, 7), nullable=True)
     needs_inspection: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False,
+        Enum(TaskStatus, values_callable=lambda x: [e.value for e in x]),
+        default=TaskStatus.PENDING, nullable=False,
     )
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(
@@ -182,7 +187,8 @@ class DeliveryTask(Base):
     delivery_address: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_third_party_carrier: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     status: Mapped[TaskStatus] = mapped_column(
-        Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False,
+        Enum(TaskStatus, values_callable=lambda x: [e.value for e in x]),
+        default=TaskStatus.PENDING, nullable=False,
     )
     note: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

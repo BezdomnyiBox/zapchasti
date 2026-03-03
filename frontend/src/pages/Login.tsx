@@ -15,7 +15,7 @@ export default function Login() {
     setLoading(true);
     try {
       const u = await auth.login(username.trim(), password);
-      if (u) navigate(u.role === "admin" ? "/picker" : "/client", { replace: true });
+      if (u) navigate(u.role === "user" ? "/client" : "/picker", { replace: true });
     } finally {
       setLoading(false);
     }

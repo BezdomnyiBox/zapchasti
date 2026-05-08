@@ -65,7 +65,11 @@ async def get_category_tree(db: AsyncSession) -> list[CategoryTreeResponse]:
     )
     categories = list(result.scalars().all())
     nodes = {
-        category.id: CategoryTreeResponse.model_validate(category)
+        category.id: CategoryTreeResponse(
+            id=category.id,
+            parent_id=category.parent_id,
+            name=category.name,
+        )
         for category in categories
     }
     roots: list[CategoryTreeResponse] = []

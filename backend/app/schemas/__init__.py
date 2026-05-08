@@ -17,6 +17,20 @@ from app.schemas.order import (
     ReviewCreate,
     ReviewResponse,
 )
+from app.schemas.catalog import (
+    CarBrandResponse,
+    CarModelResponse,
+    CarBodyResponse,
+    CarEngineResponse,
+    PartBrandResponse,
+    CategoryResponse,
+    CategoryTreeResponse,
+    PartResponse,
+    PartDetailResponse,
+    PartApplicabilityResponse,
+    PartAnalogResponse,
+    PartBrandCategoryResponse,
+)
 
 __all__ = [
     "UserCreate",
@@ -34,4 +48,16 @@ __all__ = [
     "PhotoResponse",
     "ReviewCreate",
     "ReviewResponse",
+    "CarBrandResponse",
+    "CarModelResponse",
+    "CarBodyResponse",
+    "CarEngineResponse",
+    "PartBrandResponse",
+    "CategoryResponse",
+    "CategoryTreeResponse",
+    "PartResponse",
+    "PartDetailResponse",
+    "PartApplicabilityResponse",
+    "PartAnalogResponse",
+    "PartBrandCategoryResponse",
 ]

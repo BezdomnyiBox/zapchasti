@@ -30,6 +30,17 @@ from app.crud.order import (
     create_review,
     get_reviews_for_courier,
 )
+from app.crud.catalog import (
+    get_car_brands,
+    get_car_models_by_brand,
+    get_car_bodies_by_model,
+    get_car_engines_by_model,
+    get_part_brands,
+    get_category_tree,
+    get_parts,
+    get_part_by_id,
+    get_part_analogs,
+)
 
 __all__ = [
     "get_user_by_id",
@@ -60,4 +71,13 @@ __all__ = [
     "create_photo",
     "create_review",
     "get_reviews_for_courier",
+    "get_car_brands",
+    "get_car_models_by_brand",
+    "get_car_bodies_by_model",
+    "get_car_engines_by_model",
+    "get_part_brands",
+    "get_category_tree",
+    "get_parts",
+    "get_part_by_id",
+    "get_part_analogs",
 ]

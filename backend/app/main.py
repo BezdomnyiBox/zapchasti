@@ -7,7 +7,23 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.api.router import router
-from app.models import User, CourierProfile, Order, OrderPhoto, Review  # noqa: F401
+from app.models import (  # noqa: F401
+    User,
+    CourierProfile,
+    Order,
+    OrderPhoto,
+    Review,
+    CarBrand,
+    CarModel,
+    CarBody,
+    CarEngine,
+    PartBrand,
+    Category,
+    Part,
+    PartApplicability,
+    PartAnalog,
+    PartBrandCategory,
+)
 
 logger = logging.getLogger(__name__)
 

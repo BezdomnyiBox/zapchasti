@@ -1,4 +1,4 @@
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
@@ -78,6 +78,48 @@ async def get_category_tree(db: AsyncSession) -> list[CategoryTreeResponse]:
         if parent:
             parent.children.append(node)
     return roots
+
+
+async def validate_part_applicability_scope(
+    db: AsyncSession,
+    car_brand_id: int,
+    car_model_id: int | None = None,
+    car_body_id: int | None = None,
+    car_engine_id: int | None = None,
+) -> None:
+    if (car_body_id is not None or car_engine_id is not None) and car_model_id is None:
+        raise ValueError("Кузов или двигатель нельзя указать без модели автомобиля")
+
+    brand_exists = await db.scalar(select(CarBrand.id).where(CarBrand.id == car_brand_id))
+    if brand_exists is None:
+        raise ValueError("Марка автомобиля не найдена")
+
+    if car_model_id is not None:
+        model_brand_id = await db.scalar(
+            select(CarModel.car_brand_id).where(CarModel.id == car_model_id)
+        )
+        if model_brand_id is None:
+            raise ValueError("Модель автомобиля не найдена")
+        if model_brand_id != car_brand_id:
+            raise ValueError("Модель автомобиля не принадлежит выбранной марке")
+
+    if car_body_id is not None:
+        body_model_id = await db.scalar(
+            select(CarBody.car_model_id).where(CarBody.id == car_body_id)
+        )
+        if body_model_id is None:
+            raise ValueError("Кузов автомобиля не найден")
+        if body_model_id != car_model_id:
+            raise ValueError("Кузов автомобиля не принадлежит выбранной модели")
+
+    if car_engine_id is not None:
+        engine_model_id = await db.scalar(
+            select(CarEngine.car_model_id).where(CarEngine.id == car_engine_id)
+        )
+        if engine_model_id is None:
+            raise ValueError("Двигатель автомобиля не найден")
+        if engine_model_id != car_model_id:
+            raise ValueError("Двигатель автомобиля не принадлежит выбранной модели")
 
 
 async def _resolve_vehicle_scope(
@@ -200,8 +242,13 @@ async def get_part_analogs(db: AsyncSession, part_id: int) -> list[Part]:
     analog = aliased(Part)
     result = await db.execute(
         select(analog)
-        .join(PartAnalog, PartAnalog.analog_part_id == analog.id)
-        .where(PartAnalog.part_id == part_id)
+        .join(
+            PartAnalog,
+            or_(
+                and_(PartAnalog.part_id == part_id, PartAnalog.analog_part_id == analog.id),
+                and_(PartAnalog.analog_part_id == part_id, PartAnalog.part_id == analog.id),
+            ),
+        )
         .order_by(analog.name, analog.article)
     )
     return list(result.scalars().all())

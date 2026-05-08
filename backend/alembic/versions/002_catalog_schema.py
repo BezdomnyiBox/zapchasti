@@ -40,9 +40,22 @@ def upgrade() -> None:
         sa.Column("name", sa.String(length=150), nullable=False),
         sa.ForeignKeyConstraint(["parent_id"], ["categories.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("parent_id", "name", name="uq_categories_parent_name"),
     )
     op.create_index(op.f("ix_categories_parent_id"), "categories", ["parent_id"], unique=False)
+    op.create_index(
+        "uq_categories_root_name",
+        "categories",
+        ["name"],
+        unique=True,
+        postgresql_where=sa.text("parent_id IS NULL"),
+    )
+    op.create_index(
+        "uq_categories_parent_name",
+        "categories",
+        ["parent_id", "name"],
+        unique=True,
+        postgresql_where=sa.text("parent_id IS NOT NULL"),
+    )
 
     op.create_table(
         "car_models",
@@ -110,6 +123,7 @@ def upgrade() -> None:
         "part_analogs",
         sa.Column("part_id", sa.Integer(), nullable=False),
         sa.Column("analog_part_id", sa.Integer(), nullable=False),
+        sa.CheckConstraint("part_id < analog_part_id", name="ck_part_analogs_canonical_order"),
         sa.CheckConstraint("part_id <> analog_part_id", name="ck_part_analogs_not_self"),
         sa.ForeignKeyConstraint(["analog_part_id"], ["parts.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["part_id"], ["parts.id"], ondelete="CASCADE"),
@@ -139,23 +153,28 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["car_model_id"], ["car_models.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["part_id"], ["parts.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint(
-            "part_id",
-            "car_brand_id",
-            "car_model_id",
-            "car_body_id",
-            "car_engine_id",
-            name="uq_part_applicability_scope",
-        ),
     )
     op.create_index(op.f("ix_part_applicability_car_body_id"), "part_applicability", ["car_body_id"], unique=False)
     op.create_index(op.f("ix_part_applicability_car_brand_id"), "part_applicability", ["car_brand_id"], unique=False)
     op.create_index(op.f("ix_part_applicability_car_engine_id"), "part_applicability", ["car_engine_id"], unique=False)
     op.create_index(op.f("ix_part_applicability_car_model_id"), "part_applicability", ["car_model_id"], unique=False)
     op.create_index(op.f("ix_part_applicability_part_id"), "part_applicability", ["part_id"], unique=False)
+    op.create_index(
+        "uq_part_applicability_scope",
+        "part_applicability",
+        [
+            "part_id",
+            "car_brand_id",
+            sa.text("COALESCE(car_model_id, 0)"),
+            sa.text("COALESCE(car_body_id, 0)"),
+            sa.text("COALESCE(car_engine_id, 0)"),
+        ],
+        unique=True,
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("uq_part_applicability_scope", table_name="part_applicability")
     op.drop_index(op.f("ix_part_applicability_part_id"), table_name="part_applicability")
     op.drop_index(op.f("ix_part_applicability_car_model_id"), table_name="part_applicability")
     op.drop_index(op.f("ix_part_applicability_car_engine_id"), table_name="part_applicability")
@@ -175,6 +194,8 @@ def downgrade() -> None:
     op.drop_table("parts")
     op.drop_index(op.f("ix_car_models_car_brand_id"), table_name="car_models")
     op.drop_table("car_models")
+    op.drop_index("uq_categories_parent_name", table_name="categories")
+    op.drop_index("uq_categories_root_name", table_name="categories")
     op.drop_index(op.f("ix_categories_parent_id"), table_name="categories")
     op.drop_table("categories")
     op.drop_table("part_brands")

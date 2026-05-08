@@ -1,4 +1,4 @@
-from sqlalchemy import CheckConstraint, ForeignKey, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -86,9 +86,6 @@ class PartBrand(Base):
 
 class Category(Base):
     __tablename__ = "categories"
-    __table_args__ = (
-        UniqueConstraint("parent_id", "name", name="uq_categories_parent_name"),
-    )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     parent_id: Mapped[int | None] = mapped_column(
@@ -134,14 +131,6 @@ class Part(Base):
 class PartApplicability(Base):
     __tablename__ = "part_applicability"
     __table_args__ = (
-        UniqueConstraint(
-            "part_id",
-            "car_brand_id",
-            "car_model_id",
-            "car_body_id",
-            "car_engine_id",
-            name="uq_part_applicability_scope",
-        ),
         CheckConstraint(
             "car_body_id IS NULL OR car_model_id IS NOT NULL",
             name="ck_part_applicability_body_requires_model",
@@ -180,6 +169,7 @@ class PartAnalog(Base):
     __tablename__ = "part_analogs"
     __table_args__ = (
         UniqueConstraint("part_id", "analog_part_id", name="uq_part_analogs_pair"),
+        CheckConstraint("part_id < analog_part_id", name="ck_part_analogs_canonical_order"),
         CheckConstraint("part_id <> analog_part_id", name="ck_part_analogs_not_self"),
     )
 
@@ -208,3 +198,27 @@ class PartBrandCategory(Base):
 
     part_brand: Mapped["PartBrand"] = relationship(back_populates="categories")
     category: Mapped["Category"] = relationship(back_populates="part_brands")
+
+
+Index(
+    "uq_categories_root_name",
+    Category.name,
+    unique=True,
+    postgresql_where=Category.parent_id.is_(None),
+)
+Index(
+    "uq_categories_parent_name",
+    Category.parent_id,
+    Category.name,
+    unique=True,
+    postgresql_where=Category.parent_id.is_not(None),
+)
+Index(
+    "uq_part_applicability_scope",
+    PartApplicability.part_id,
+    PartApplicability.car_brand_id,
+    func.coalesce(PartApplicability.car_model_id, 0),
+    func.coalesce(PartApplicability.car_body_id, 0),
+    func.coalesce(PartApplicability.car_engine_id, 0),
+    unique=True,
+)

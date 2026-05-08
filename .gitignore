@@ -86,3 +86,4 @@ docker-compose.override.yml
 *.db
 .mypy_cache/
 .ruff_cache/
+docs/FEATURE_IMPLEMENTATION_AUDIT.md

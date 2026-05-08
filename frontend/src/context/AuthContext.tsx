@@ -35,8 +35,8 @@ async function fetchMe(signal?: AbortSignal): Promise<User> {
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
   const [token, setTokenState] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [isAuthReady, setIsAuthReady] = useState(() => !localStorage.getItem(TOKEN_KEY));
 
   const setToken = useCallback((newToken: string | null, newRefreshToken?: string | null) => {
     if (newToken) {
@@ -56,7 +56,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!token) {
-      setIsAuthReady(true);
       return;
     }
     const controller = new AbortController();

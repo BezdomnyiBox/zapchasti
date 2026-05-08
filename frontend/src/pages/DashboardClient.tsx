@@ -50,6 +50,12 @@ export default function DashboardClient() {
             >
               Профиль
             </Link>
+            <Link
+              to="/catalog"
+              className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition"
+            >
+              Каталог
+            </Link>
             <span className="text-sm text-slate-500 dark:text-slate-400">{auth?.user?.username}</span>
             <button
               onClick={() => { auth?.logout(); navigate("/login", { replace: true }); }}

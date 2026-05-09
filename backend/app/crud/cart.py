@@ -120,98 +120,98 @@ async def checkout_cart(
     service_fee = 500.0
     delivery_fee = 300.0
 
-    async with db.begin():
-        cart_items = (
-            await db.execute(
-                select(CartItem)
-                .where(CartItem.user_id == user_id)
-                .order_by(CartItem.created_at.desc())
-            )
-        ).scalars().all()
-        if not cart_items:
-            raise ValueError("Корзина пуста")
-
-        part_ids = [item.part_id for item in cart_items]
-
-        parts = (
-            await db.execute(
-                select(Part)
-                .options(selectinload(Part.part_brand))
-                .where(Part.id.in_(part_ids))
-            )
-        ).scalars().all()
-        parts_by_id = {part.id: part for part in parts}
-        missing_parts = [part_id for part_id in part_ids if part_id not in parts_by_id]
-        if missing_parts:
-            raise ValueError("Часть запчастей больше не доступна")
-
-        offers = (
-            await db.execute(
-                select(PartOffer)
-                .where(PartOffer.part_id.in_(part_ids))
-                .with_for_update()
-            )
-        ).scalars().all()
-        offers_by_part_id = {offer.part_id: offer for offer in offers}
-
-        order_items_payload: list[dict] = []
-        part_total = 0.0
-        for item in cart_items:
-            part = parts_by_id.get(item.part_id)
-            offer = offers_by_part_id.get(item.part_id)
-            if part is None or offer is None:
-                raise ValueError("Цена по одной из позиций недоступна, обновите корзину")
-            if offer.quantity_available <= 0:
-                raise ValueError(f"Позиция {part.article} недоступна в наличии")
-            if item.quantity > offer.quantity_available:
-                raise ValueError(
-                    f"Для позиции {part.article} доступно только {offer.quantity_available} шт.",
-                )
-            unit_price = float(offer.price)
-            subtotal = unit_price * item.quantity
-            part_total += subtotal
-            order_items_payload.append(
-                {
-                    "part_id": part.id,
-                    "part_name_snapshot": part.name,
-                    "part_article_snapshot": part.article,
-                    "part_brand_snapshot": (
-                        part.part_brand.name if isinstance(part.part_brand, PartBrand) else ""
-                    ),
-                    "unit_price_snapshot": unit_price,
-                    "quantity": item.quantity,
-                    "subtotal": subtotal,
-                }
-            )
-
-        order = Order(
-            client_id=user_id,
-            delivery_address=delivery_address,
-            cargo_size=cargo_size,
-            comment=comment,
-            part_name=(
-                f"Заказ из корзины ({len(order_items_payload)} поз.)"
-                if len(order_items_payload) > 1
-                else order_items_payload[0]["part_name_snapshot"]
-            ),
-            part_number=(
-                None
-                if len(order_items_payload) > 1
-                else order_items_payload[0]["part_article_snapshot"]
-            ),
-            part_price=part_total,
-            service_fee=service_fee,
-            delivery_fee=delivery_fee,
-            total_price=part_total + service_fee + delivery_fee,
-            status=OrderStatus.WAITING_COURIER,
+    cart_items = (
+        await db.execute(
+            select(CartItem)
+            .where(CartItem.user_id == user_id)
+            .order_by(CartItem.created_at.desc())
         )
-        db.add(order)
-        await db.flush()
+    ).scalars().all()
+    if not cart_items:
+        raise ValueError("Корзина пуста")
 
-        for payload in order_items_payload:
-            db.add(OrderItem(order_id=order.id, **payload))
+    part_ids = [item.part_id for item in cart_items]
 
-        await db.execute(delete(CartItem).where(CartItem.user_id == user_id))
+    parts = (
+        await db.execute(
+            select(Part)
+            .options(selectinload(Part.part_brand))
+            .where(Part.id.in_(part_ids))
+        )
+    ).scalars().all()
+    parts_by_id = {part.id: part for part in parts}
+    missing_parts = [part_id for part_id in part_ids if part_id not in parts_by_id]
+    if missing_parts:
+        raise ValueError("Часть запчастей больше не доступна")
+
+    offers = (
+        await db.execute(
+            select(PartOffer)
+            .where(PartOffer.part_id.in_(part_ids))
+            .with_for_update()
+        )
+    ).scalars().all()
+    offers_by_part_id = {offer.part_id: offer for offer in offers}
+
+    order_items_payload: list[dict] = []
+    part_total = 0.0
+    for item in cart_items:
+        part = parts_by_id.get(item.part_id)
+        offer = offers_by_part_id.get(item.part_id)
+        if part is None or offer is None:
+            raise ValueError("Цена по одной из позиций недоступна, обновите корзину")
+        if offer.quantity_available <= 0:
+            raise ValueError(f"Позиция {part.article} недоступна в наличии")
+        if item.quantity > offer.quantity_available:
+            raise ValueError(
+                f"Для позиции {part.article} доступно только {offer.quantity_available} шт.",
+            )
+        unit_price = float(offer.price)
+        subtotal = unit_price * item.quantity
+        part_total += subtotal
+        order_items_payload.append(
+            {
+                "part_id": part.id,
+                "part_name_snapshot": part.name,
+                "part_article_snapshot": part.article,
+                "part_brand_snapshot": (
+                    part.part_brand.name if isinstance(part.part_brand, PartBrand) else ""
+                ),
+                "unit_price_snapshot": unit_price,
+                "quantity": item.quantity,
+                "subtotal": subtotal,
+            }
+        )
+
+    order = Order(
+        client_id=user_id,
+        delivery_address=delivery_address,
+        cargo_size=cargo_size,
+        comment=comment,
+        part_name=(
+            f"Заказ из корзины ({len(order_items_payload)} поз.)"
+            if len(order_items_payload) > 1
+            else order_items_payload[0]["part_name_snapshot"]
+        ),
+        part_number=(
+            None
+            if len(order_items_payload) > 1
+            else order_items_payload[0]["part_article_snapshot"]
+        ),
+        part_price=part_total,
+        service_fee=service_fee,
+        delivery_fee=delivery_fee,
+        total_price=part_total + service_fee + delivery_fee,
+        status=OrderStatus.WAITING_COURIER,
+    )
+    db.add(order)
+    await db.flush()
+
+    for payload in order_items_payload:
+        db.add(OrderItem(order_id=order.id, **payload))
+
+    await db.execute(delete(CartItem).where(CartItem.user_id == user_id))
+    await db.commit()
 
     await db.refresh(order)
     return order

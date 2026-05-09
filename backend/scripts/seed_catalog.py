@@ -19,6 +19,7 @@ if str(BACKEND_DIR) not in sys.path:
     sys.path.insert(0, str(BACKEND_DIR))
 
 from app.core.database import AsyncSessionLocal, engine  # noqa: E402
+from app.models.cart import PartOffer  # noqa: E402
 from app.models.catalog import (  # noqa: E402
     CarBody,
     CarBrand,
@@ -409,6 +410,20 @@ async def seed_analogs(session: AsyncSession, stats: Stats, parts: list[Part]) -
         stats["part_analogs_created"] += 1
 
 
+async def seed_part_offers(session: AsyncSession, stats: Stats, parts: list[Part]) -> None:
+    """One PartOffer per part — required for cart/checkout (price and stock)."""
+    for index, part in enumerate(parts):
+        price = 290.0 + float(index * 47)
+        stock = 30 + (index % 12) * 10
+        await get_or_create(
+            session,
+            PartOffer,
+            stats,
+            part_id=part.id,
+            defaults={"price": price, "quantity_available": stock},
+        )
+
+
 async def seed_part_brand_categories(
     session: AsyncSession,
     stats: Stats,
@@ -440,6 +455,7 @@ async def seed() -> Stats:
         await seed_applicability(session, stats, parts, car_data)
         await seed_analogs(session, stats, parts)
         await seed_part_brand_categories(session, stats, parts)
+        await seed_part_offers(session, stats, parts)
         await session.commit()
     return stats
 
@@ -456,6 +472,7 @@ def print_stats(stats: Stats) -> None:
         "part_applicability",
         "part_analogs",
         "part_brand_categories",
+        "part_offers",
     ]
     print("Catalog seed completed:")
     for table in tables:

@@ -42,6 +42,18 @@ from app.crud.catalog import (
     get_part_by_id,
     get_part_analogs,
 )
+from app.crud.cart import (
+    get_part_with_meta,
+    get_part_offer,
+    get_cart_item_by_id,
+    get_cart_item_by_part,
+    list_cart_items,
+    upsert_cart_item,
+    update_cart_item_quantity,
+    delete_cart_item,
+    clear_cart,
+    build_cart_summary,
+)
 
 __all__ = [
     "get_user_by_id",
@@ -82,4 +94,14 @@ __all__ = [
     "get_parts",
     "get_part_by_id",
     "get_part_analogs",
+    "get_part_with_meta",
+    "get_part_offer",
+    "get_cart_item_by_id",
+    "get_cart_item_by_part",
+    "list_cart_items",
+    "upsert_cart_item",
+    "update_cart_item_quantity",
+    "delete_cart_item",
+    "clear_cart",
+    "build_cart_summary",
 ]

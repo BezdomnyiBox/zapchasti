@@ -13,6 +13,8 @@ from app.models import (  # noqa: F401
     Order,
     OrderPhoto,
     Review,
+    PartOffer,
+    CartItem,
     CarBrand,
     CarModel,
     CarBody,

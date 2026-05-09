@@ -31,6 +31,12 @@ from app.schemas.catalog import (
     PartAnalogResponse,
     PartBrandCategoryResponse,
 )
+from app.schemas.cart import (
+    CartAddRequest,
+    CartUpdateRequest,
+    CartItemResponse,
+    CartSummaryResponse,
+)
 
 __all__ = [
     "UserCreate",
@@ -60,4 +66,8 @@ __all__ = [
     "PartApplicabilityResponse",
     "PartAnalogResponse",
     "PartBrandCategoryResponse",
+    "CartAddRequest",
+    "CartUpdateRequest",
+    "CartItemResponse",
+    "CartSummaryResponse",
 ]

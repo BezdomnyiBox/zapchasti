@@ -1088,6 +1088,25 @@ textarea {
   color: white;
 }
 
+.app-header-cart {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.app-header-badge {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--rust);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.25rem;
+  text-align: center;
+}
+
 .app-page {
   max-width: 1180px;
   margin: 0 auto;

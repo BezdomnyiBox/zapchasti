@@ -1,7 +1,6 @@
-import { useCallback, useContext, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
 import { toast } from "react-toastify";
-import { AuthContext } from "../context/AuthContext";
+import AppHeader from "../components/AppHeader";
 import {
   acceptOrder,
   getAvailableOrders,
@@ -24,8 +23,6 @@ const STATUS_LABELS: Record<OrderStatus, string> = {
 };
 
 export default function DashboardCarrier() {
-  const auth = useContext(AuthContext);
-  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("available");
   const [available, setAvailable] = useState<OrderListItem[]>([]);
   const [myOrders, setMyOrders] = useState<OrderListItem[]>([]);
@@ -88,20 +85,7 @@ export default function DashboardCarrier() {
 
   return (
     <div className="app-shell">
-      <header className="app-topbar">
-        <div className="app-topbar-inner">
-          <Link to="/carrier" className="app-brand" aria-label="Саха Запчасти">
-            <span className="app-brand-mark">СЗ</span>
-            САХА ЗАПЧАСТИ
-          </Link>
-          <nav className="app-nav" aria-label="Навигация перевозчика">
-            <Link to="/profile">Профиль</Link>
-            <button type="button" onClick={() => { auth?.logout(); navigate("/login", { replace: true }); }}>
-              Выйти
-            </button>
-          </nav>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="app-page">
         <section className="app-hero">

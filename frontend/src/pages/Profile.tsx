@@ -1,6 +1,7 @@
 import { useState, useEffect, useContext } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import AppHeader from "../components/AppHeader";
 import { AuthContext } from "../context/AuthContext";
 import { updateProfile, getCourierProfile, updateCourierProfile } from "../services/profile";
 import type { CourierProfile } from "../types/order";
@@ -81,18 +82,7 @@ export default function Profile() {
 
   return (
     <div className="app-shell">
-      <header className="app-topbar">
-        <div className="app-topbar-inner">
-          <Link to={backPath} className="app-brand" aria-label="Саха Запчасти">
-            <span className="app-brand-mark">СЗ</span>
-            САХА ЗАПЧАСТИ
-          </Link>
-          <nav className="app-nav" aria-label="Навигация профиля">
-            <Link to={backPath}>Назад</Link>
-            {user?.role === "client" && <Link to="/catalog">Каталог</Link>}
-          </nav>
-        </div>
-      </header>
+      <AppHeader brandTo={backPath} />
 
       <main className="app-page">
         <section className="app-hero">

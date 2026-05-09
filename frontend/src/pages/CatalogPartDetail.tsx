@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import AppHeader from "../components/AppHeader";
 import { useCart } from "../hooks/useCart";
 import {
   getCarBodies,
@@ -162,20 +163,7 @@ export default function CatalogPartDetail() {
 
   return (
     <div className="app-shell">
-      <header className="app-topbar">
-        <div className="app-topbar-inner">
-          <Link to="/client" className="app-brand" aria-label="Саха Запчасти">
-            <span className="app-brand-mark">СЗ</span>
-            САХА ЗАПЧАСТИ
-          </Link>
-          <nav className="app-nav" aria-label="Навигация карточки запчасти">
-            <Link to={catalogBack}>Каталог</Link>
-            <Link to="/cart">Корзина</Link>
-            <Link to="/client">Мои заказы</Link>
-            <Link to="/client/new" className="app-btn-primary">Новый заказ</Link>
-          </nav>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="app-page">
         <Link to={catalogBack} className="app-btn-ghost">

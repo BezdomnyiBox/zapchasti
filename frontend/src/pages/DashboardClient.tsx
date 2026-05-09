@@ -1,30 +1,10 @@
 import { useContext, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
+import AppHeader from "../components/AppHeader";
+import { ORDER_STATUS_BADGE_CLASS, ORDER_STATUS_LABELS } from "../constants/orderStatus";
 import { AuthContext } from "../context/AuthContext";
 import { getOrders } from "../services/orders";
 import type { OrderListItem, OrderStatus } from "../types/order";
-
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  waiting_courier: "Ожидает курьера",
-  courier_assigned: "Курьер назначен",
-  photo_uploaded: "Фото готовы",
-  confirmed: "Подтверждён",
-  picked_up: "У курьера",
-  handed_to_carrier: "У перевозчика",
-  completed: "Завершён",
-  cancelled: "Отменён",
-};
-
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  waiting_courier: "lp-status-waiting",
-  courier_assigned: "lp-status-progress",
-  photo_uploaded: "lp-status-progress",
-  confirmed: "lp-status-success",
-  picked_up: "lp-status-progress",
-  handed_to_carrier: "lp-status-progress",
-  completed: "lp-status-success",
-  cancelled: "lp-status-cancelled",
-};
 
 const workflowItems = [
   {
@@ -46,7 +26,6 @@ const workflowItems = [
 
 export default function DashboardClient() {
   const auth = useContext(AuthContext);
-  const navigate = useNavigate();
   const [orders, setOrders] = useState<OrderListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,32 +44,17 @@ export default function DashboardClient() {
     [orders],
   );
 
-  const logout = () => {
-    auth?.logout();
-    navigate("/login", { replace: true });
-  };
+  const recentOrders = useMemo(() => {
+    const sorted = [...orders].sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+    );
+    return sorted.slice(0, 4);
+  }, [orders]);
+  const hasMoreOrders = orders.length > recentOrders.length;
 
   return (
     <div className="app-shell">
-      <header className="app-topbar">
-        <div className="app-topbar-inner">
-          <Link to="/client" className="app-brand" aria-label="Саха Запчасти">
-            <span className="app-brand-mark">СЗ</span>
-            САХА ЗАПЧАСТИ
-          </Link>
-
-          <nav className="app-nav" aria-label="Навигация клиента">
-            <Link to="/catalog">Каталог</Link>
-            <Link to="/profile">Профиль</Link>
-            <button type="button" onClick={logout}>
-              Выйти
-            </button>
-            <Link to="/client/new" className="app-btn-primary">
-              Новый заказ
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="app-page">
         <section className="app-hero">
@@ -150,12 +114,19 @@ export default function DashboardClient() {
         <section className="app-section" id="orders">
           <div className="app-section-head">
             <div>
-              <h2 className="app-section-title">Мои заказы</h2>
-              <p className="app-section-note">Открывайте карточку заказа, чтобы посмотреть детали и фото.</p>
+              <h2 className="app-section-title">Последние заказы</h2>
+              <p className="app-section-note">
+                Недавние заявки. Полный список — на странице «Заказы».
+              </p>
             </div>
-            <Link to="/client/new" className="app-btn-secondary">
-              + Новый заказ
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/orders" className="app-btn-secondary">
+                Все заказы
+              </Link>
+              <Link to="/client/new" className="app-btn-primary">
+                + Новый заказ
+              </Link>
+            </div>
           </div>
 
           {loading && <p className="mt-10 text-center text-[color:var(--steel-light)]">Загрузка заказов…</p>}
@@ -178,24 +149,41 @@ export default function DashboardClient() {
           )}
 
           {!loading && orders.length > 0 && (
-            <div className="app-grid app-grid-2">
-              {orders.map((order) => (
-                <Link key={order.id} to={`/client/orders/${order.id}`} className="app-card app-card-link">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="lp-order-title">
-                        Заказ #{order.id} — {order.part_name || order.drom_url || "Запчасть"}
-                      </p>
-                      {order.total_price != null && (
-                        <p className="lp-order-meta">{order.total_price.toLocaleString("ru-RU")} ₽</p>
-                      )}
+            <>
+              <div className="app-grid app-grid-2">
+                {recentOrders.map((order) => (
+                  <Link key={order.id} to={`/client/orders/${order.id}`} className="app-card app-card-link">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-display text-base font-semibold text-[color:var(--ink)]">
+                          Заказ #{order.id} — {order.part_name || order.drom_url || "Запчасть"}
+                        </p>
+                        {order.total_price != null && (
+                          <p className="mt-1 text-sm text-[color:var(--steel-light)]">
+                            {order.total_price.toLocaleString("ru-RU")} ₽
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${ORDER_STATUS_BADGE_CLASS[order.status as OrderStatus]}`}
+                      >
+                        {ORDER_STATUS_LABELS[order.status as OrderStatus]}
+                      </span>
                     </div>
-                    <span className={`lp-status ${STATUS_COLORS[order.status]}`}>{STATUS_LABELS[order.status]}</span>
-                  </div>
-                  <p className="lp-order-meta">{new Date(order.created_at).toLocaleString("ru-RU")}</p>
-                </Link>
-              ))}
-            </div>
+                    <p className="mt-3 text-xs text-[color:var(--steel-light)]">
+                      {new Date(order.created_at).toLocaleString("ru-RU")}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+              {hasMoreOrders ? (
+                <div className="mt-6 text-center">
+                  <Link to="/orders" className="app-btn-secondary">
+                    Показать все заказы ({orders.length})
+                  </Link>
+                </div>
+              ) : null}
+            </>
           )}
         </section>
       </main>

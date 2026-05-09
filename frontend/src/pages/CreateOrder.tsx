@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import AppHeader from "../components/AppHeader";
 import { createOrder } from "../services/orders";
 import type { CargoSize } from "../types/order";
 
@@ -48,7 +49,7 @@ export default function CreateOrder() {
         comment: comment.trim() || null,
       });
       toast.success("Заказ создан");
-      navigate("/client");
+      navigate("/orders");
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "response" in err
@@ -72,18 +73,7 @@ export default function CreateOrder() {
 
   return (
     <div className="app-shell">
-      <header className="app-topbar">
-        <div className="app-topbar-inner">
-          <Link to="/client" className="app-brand" aria-label="Саха Запчасти">
-            <span className="app-brand-mark">СЗ</span>
-            САХА ЗАПЧАСТИ
-          </Link>
-          <nav className="app-nav" aria-label="Навигация заказа">
-            <Link to="/catalog">Каталог</Link>
-            <Link to="/client">Мои заказы</Link>
-          </nav>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="app-page">
         <section className="app-hero">
@@ -96,7 +86,7 @@ export default function CreateOrder() {
           </div>
           <div className="app-actions">
             <Link to="/catalog" className="app-btn-secondary">Каталог</Link>
-            <button type="button" onClick={() => navigate("/client")} className="app-btn-ghost">
+            <button type="button" onClick={() => navigate("/orders")} className="app-btn-ghost">
               Назад к заказам
             </button>
           </div>

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import AppHeader from "../components/AppHeader";
 import { useCart } from "../hooks/useCart";
 
 export default function CartPage() {
@@ -59,18 +60,7 @@ export default function CartPage() {
 
   return (
     <div className="app-shell">
-      <header className="app-topbar">
-        <div className="app-topbar-inner">
-          <Link to="/client" className="app-brand" aria-label="Саха Запчасти">
-            <span className="app-brand-mark">СЗ</span>
-            САХА ЗАПЧАСТИ
-          </Link>
-          <nav className="app-nav" aria-label="Навигация корзины">
-            <Link to="/catalog">Каталог</Link>
-            <Link to="/client">Мои заказы</Link>
-          </nav>
-        </div>
-      </header>
+      <AppHeader />
 
       <main className="app-page">
         <section className="app-hero">

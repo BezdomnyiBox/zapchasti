@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { AuthProvider, AuthContext } from "./context/AuthContext";
+import { CartProvider } from "./context/CartProvider";
 import type { UserRole } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -19,6 +20,7 @@ const CartPage = lazy(() => import("./pages/Cart"));
 const CheckoutPage = lazy(() => import("./pages/Checkout"));
 const AdminOrdersPage = lazy(() => import("./pages/AdminOrders"));
 const AdminOrderDetailPage = lazy(() => import("./pages/AdminOrderDetail"));
+const ClientOrdersPage = lazy(() => import("./pages/ClientOrders"));
 
 function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allowedRoles: UserRole[] }) {
   const auth = useContext(AuthContext);
@@ -44,6 +46,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <CartProvider>
         <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-slate-500">Загрузка…</div>}>
           <Routes>
             <Route path="/" element={<HomeRedirect />} />
@@ -56,6 +59,7 @@ function App() {
 
             {/* Client routes */}
             <Route path="/client" element={<ProtectedRoute allowedRoles={["client"]}><DashboardClient /></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute allowedRoles={["client"]}><ClientOrdersPage /></ProtectedRoute>} />
             <Route path="/client/new" element={<ProtectedRoute allowedRoles={["client"]}><CreateOrder /></ProtectedRoute>} />
             <Route path="/client/orders/:orderId" element={<ProtectedRoute allowedRoles={["client", "courier", "carrier"]}><OrderDetail /></ProtectedRoute>} />
 
@@ -73,6 +77,7 @@ function App() {
             <Route path="/profile" element={<ProtectedRoute allowedRoles={["client", "courier", "carrier"]}><ProfilePage /></ProtectedRoute>} />
           </Routes>
         </Suspense>
+        </CartProvider>
         <ToastContainer position="top-right" autoClose={3000} />
       </BrowserRouter>
     </AuthProvider>

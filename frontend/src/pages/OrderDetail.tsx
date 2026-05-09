@@ -1,31 +1,11 @@
 import { useEffect, useState, useContext } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import AppHeader from "../components/AppHeader";
+import { ORDER_STATUS_BADGE_CLASS, ORDER_STATUS_LABELS } from "../constants/orderStatus";
 import { AuthContext } from "../context/AuthContext";
 import { getOrder, approveOrder, rejectOrder, confirmDelivery, submitReview, payOrderMock } from "../services/orders";
 import type { Order, OrderStatus, CargoSize, PaymentStatus } from "../types/order";
-
-const STATUS_LABELS: Record<OrderStatus, string> = {
-  waiting_courier: "Ожидает курьера",
-  courier_assigned: "Курьер назначен",
-  photo_uploaded: "Фото готовы — просмотрите",
-  confirmed: "Подтверждён",
-  picked_up: "Запчасть у курьера",
-  handed_to_carrier: "Передано перевозчику",
-  completed: "Заказ завершён",
-  cancelled: "Заказ отменён",
-};
-
-const STATUS_COLORS: Record<OrderStatus, string> = {
-  waiting_courier: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  courier_assigned: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
-  photo_uploaded: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  confirmed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  picked_up: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300",
-  handed_to_carrier: "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300",
-  completed: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  cancelled: "bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400",
-};
 
 const CARGO_LABELS: Record<CargoSize, string> = {
   small: "Мелкая посылка",
@@ -54,9 +34,12 @@ export default function OrderDetail() {
   const isClient = order?.client_id === auth?.user?.id;
   const canPay = isClient && order?.payment_status === "pending" && order?.status !== "cancelled";
 
+  const role = auth?.user?.role;
+  const staffDash = role === "carrier" ? "/carrier" : "/courier";
+
   useEffect(() => {
     if (!orderId) return;
-    getOrder(parseInt(orderId))
+    getOrder(parseInt(orderId, 10))
       .then(setOrder)
       .catch(() => toast.error("Заказ не найден"))
       .finally(() => setLoading(false));
@@ -69,8 +52,11 @@ export default function OrderDetail() {
       const updated = await approveOrder(order.id);
       setOrder(updated);
       toast.success("Покупка подтверждена");
-    } catch { toast.error("Ошибка"); }
-    finally { setActing(false); }
+    } catch {
+      toast.error("Ошибка");
+    } finally {
+      setActing(false);
+    }
   };
 
   const handleReject = async () => {
@@ -80,8 +66,11 @@ export default function OrderDetail() {
       const updated = await rejectOrder(order.id);
       setOrder(updated);
       toast.success("Заказ отменён, средства вернутся");
-    } catch { toast.error("Ошибка"); }
-    finally { setActing(false); }
+    } catch {
+      toast.error("Ошибка");
+    } finally {
+      setActing(false);
+    }
   };
 
   const handleConfirmDelivery = async () => {
@@ -91,8 +80,11 @@ export default function OrderDetail() {
       const updated = await confirmDelivery(order.id);
       setOrder(updated);
       toast.success("Получение подтверждено");
-    } catch { toast.error("Ошибка"); }
-    finally { setActing(false); }
+    } catch {
+      toast.error("Ошибка");
+    } finally {
+      setActing(false);
+    }
   };
 
   const handleReview = async () => {
@@ -107,8 +99,11 @@ export default function OrderDetail() {
       const updated = await getOrder(order.id);
       setOrder(updated);
       toast.success("Спасибо за отзыв!");
-    } catch { toast.error("Ошибка"); }
-    finally { setActing(false); }
+    } catch {
+      toast.error("Ошибка");
+    } finally {
+      setActing(false);
+    }
   };
 
   const handlePay = async () => {
@@ -130,116 +125,181 @@ export default function OrderDetail() {
     }
   };
 
+  const header =
+    role === "client" ? (
+      <AppHeader />
+    ) : (
+      <AppHeader
+        brandTo={staffDash}
+        nav={
+          <>
+            <Link to={staffDash}>Кабинет</Link>
+            <button
+              type="button"
+              onClick={() => {
+                auth?.logout();
+                navigate("/login", { replace: true });
+              }}
+            >
+              Выйти
+            </button>
+          </>
+        }
+      />
+    );
+
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-500">Загрузка…</div>;
+    return (
+      <div className="app-shell">
+        {header}
+        <main className="app-page">
+          <p className="text-center text-[color:var(--steel-light)] py-16">Загрузка…</p>
+        </main>
+      </div>
+    );
   }
+
   if (!order) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900"><p className="text-slate-500">Заказ не найден</p></div>;
+    return (
+      <div className="app-shell">
+        {header}
+        <main className="app-page">
+          <div className="app-card text-center py-12">
+            <p className="text-[color:var(--steel-light)]">Заказ не найден</p>
+            {role === "client" ? (
+              <Link to="/orders" className="app-btn-secondary mt-4 inline-block">
+                К списку заказов
+              </Link>
+            ) : (
+              <Link to={staffDash} className="app-btn-secondary mt-4 inline-block">
+                В кабинет
+              </Link>
+            )}
+          </div>
+        </main>
+      </div>
+    );
   }
 
-  const sectionCls = "bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5";
-  const btnPrimary = "px-5 py-2.5 rounded-xl font-medium text-white transition disabled:opacity-60 disabled:cursor-not-allowed";
-  const inputCls = "w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 transition";
+  const sectionCls = "app-card";
+  const termCls = "text-[color:var(--steel-light)] shrink-0 w-32";
+  const inputCls = "app-input";
 
-  const label = order.part_name || (order.drom_url ? "Ссылка Drom" : [order.car_brand, order.car_model, order.car_year].filter(Boolean).join(" ") || "Запчасть");
+  const label =
+    order.part_name ||
+    (order.drom_url ? "Ссылка Drom" : [order.car_brand, order.car_model, order.car_year].filter(Boolean).join(" ") || "Запчасть");
+
+  const backLink =
+    role === "client" ? (
+      <Link to="/orders" className="app-btn-ghost inline-block mb-4">
+        ← К заказам
+      </Link>
+    ) : (
+      <Link to={staffDash} className="app-btn-ghost inline-block mb-4">
+        ← В кабинет
+      </Link>
+    );
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 px-4 py-8">
-      <div className="mx-auto max-w-2xl">
-        <button onClick={() => navigate(-1)} className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition mb-4">
-          &larr; Назад
-        </button>
+    <div className="app-shell">
+      {header}
 
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">
-            Заказ #{order.id}
-          </h1>
-          <span className={`px-3 py-1 rounded-lg text-sm font-medium ${STATUS_COLORS[order.status]}`}>
-            {STATUS_LABELS[order.status]}
+      <main className="app-page max-w-2xl mx-auto">
+        {backLink}
+
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-6">
+          <h1 className="app-title text-2xl">Заказ #{order.id}</h1>
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-medium ${ORDER_STATUS_BADGE_CLASS[order.status as OrderStatus]}`}
+          >
+            {ORDER_STATUS_LABELS[order.status as OrderStatus]}
           </span>
         </div>
 
         <div className="space-y-4">
-          {/* Part info */}
           <div className={sectionCls}>
-            <h2 className="font-medium text-slate-800 dark:text-slate-100 mb-3">{label}</h2>
+            <h2 className="font-display font-semibold text-[color:var(--ink)] mb-3">{label}</h2>
             <dl className="space-y-1.5 text-sm">
               {order.drom_url && (
                 <div className="flex gap-2">
-                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Drom:</dt>
-                  <dd><a href={order.drom_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 underline break-all">{order.drom_url}</a></dd>
+                  <dt className={termCls}>Drom:</dt>
+                  <dd>
+                    <a
+                      href={order.drom_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[color:var(--rust)] underline break-all"
+                    >
+                      {order.drom_url}
+                    </a>
+                  </dd>
                 </div>
               )}
               {order.car_brand && (
                 <div className="flex gap-2">
-                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Авто:</dt>
-                  <dd className="text-slate-800 dark:text-slate-200">{[order.car_brand, order.car_model, order.car_year].filter(Boolean).join(" ")}</dd>
+                  <dt className={termCls}>Авто:</dt>
+                  <dd className="text-[color:var(--ink)]">
+                    {[order.car_brand, order.car_model, order.car_year].filter(Boolean).join(" ")}
+                  </dd>
                 </div>
               )}
               {order.part_name && (
                 <div className="flex gap-2">
-                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Деталь:</dt>
-                  <dd className="text-slate-800 dark:text-slate-200">{order.part_name}{order.part_number ? ` (${order.part_number})` : ""}</dd>
+                  <dt className={termCls}>Деталь:</dt>
+                  <dd className="text-[color:var(--ink)]">
+                    {order.part_name}
+                    {order.part_number ? ` (${order.part_number})` : ""}
+                  </dd>
                 </div>
               )}
               {order.description && (
                 <div className="flex gap-2">
-                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Описание:</dt>
-                  <dd className="text-slate-800 dark:text-slate-200">{order.description}</dd>
+                  <dt className={termCls}>Описание:</dt>
+                  <dd className="text-[color:var(--ink)]">{order.description}</dd>
                 </div>
               )}
               <div className="flex gap-2">
-                <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Тип груза:</dt>
-                <dd className="text-slate-800 dark:text-slate-200">{CARGO_LABELS[order.cargo_size]}</dd>
+                <dt className={termCls}>Тип груза:</dt>
+                <dd className="text-[color:var(--ink)]">{CARGO_LABELS[order.cargo_size]}</dd>
               </div>
               {order.seller_address && (
                 <div className="flex gap-2">
-                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Продавец:</dt>
-                  <dd className="text-slate-800 dark:text-slate-200">{order.seller_address}</dd>
+                  <dt className={termCls}>Продавец:</dt>
+                  <dd className="text-[color:var(--ink)]">{order.seller_address}</dd>
                 </div>
               )}
               <div className="flex gap-2">
-                <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Доставка:</dt>
-                <dd className="text-slate-800 dark:text-slate-200">{order.delivery_address}</dd>
+                <dt className={termCls}>Доставка:</dt>
+                <dd className="text-[color:var(--ink)]">{order.delivery_address}</dd>
               </div>
               {order.comment && (
                 <div className="flex gap-2">
-                  <dt className="text-slate-500 dark:text-slate-400 shrink-0 w-32">Комментарий:</dt>
-                  <dd className="text-slate-800 dark:text-slate-200">{order.comment}</dd>
+                  <dt className={termCls}>Комментарий:</dt>
+                  <dd className="text-[color:var(--ink)]">{order.comment}</dd>
                 </div>
               )}
             </dl>
           </div>
 
-          {/* Pricing */}
           {order.total_price != null && (
             <div className={sectionCls}>
-              <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-2">Стоимость</h3>
-              <div className="text-sm space-y-1">
-                {order.part_price != null && <p className="text-slate-600 dark:text-slate-400">Запчасть: {order.part_price.toLocaleString("ru-RU")} ₽</p>}
-                {order.service_fee != null && <p className="text-slate-600 dark:text-slate-400">Сервисный сбор: {order.service_fee.toLocaleString("ru-RU")} ₽</p>}
-                {order.delivery_fee != null && <p className="text-slate-600 dark:text-slate-400">Доставка: {order.delivery_fee.toLocaleString("ru-RU")} ₽</p>}
-                <p className="font-semibold text-slate-800 dark:text-slate-100 pt-1 border-t border-slate-200 dark:border-slate-700">
+              <h3 className="font-display font-semibold text-[color:var(--ink)] mb-2">Стоимость</h3>
+              <div className="text-sm space-y-1 text-[color:var(--steel-light)]">
+                {order.part_price != null && <p>Запчасть: {order.part_price.toLocaleString("ru-RU")} ₽</p>}
+                {order.service_fee != null && <p>Сервисный сбор: {order.service_fee.toLocaleString("ru-RU")} ₽</p>}
+                {order.delivery_fee != null && <p>Доставка: {order.delivery_fee.toLocaleString("ru-RU")} ₽</p>}
+                <p className="font-semibold text-[color:var(--ink)] pt-1 border-t border-[color:var(--border)]">
                   Итого: {order.total_price.toLocaleString("ru-RU")} ₽
                 </p>
-                <p className="text-slate-600 dark:text-slate-400">
-                  Статус оплаты: {PAYMENT_LABELS[order.payment_status]}
-                </p>
-                {order.payment_id && (
-                  <p className="text-slate-600 dark:text-slate-400">
-                    Payment ID: {order.payment_id}
-                  </p>
-                )}
-                {order.paid_at && (
-                  <p className="text-slate-600 dark:text-slate-400">
-                    Оплачен: {new Date(order.paid_at).toLocaleString("ru-RU")}
-                  </p>
-                )}
+                <p>Статус оплаты: {PAYMENT_LABELS[order.payment_status]}</p>
+                {order.payment_id && <p>Payment ID: {order.payment_id}</p>}
+                {order.paid_at && <p>Оплачен: {new Date(order.paid_at).toLocaleString("ru-RU")}</p>}
                 {canPay && (
                   <button
+                    type="button"
                     onClick={handlePay}
                     disabled={acting}
-                    className={`${btnPrimary} bg-emerald-600 hover:bg-emerald-500 mt-2`}
+                    className="app-btn-primary mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     Оплатить
                   </button>
@@ -250,18 +310,17 @@ export default function OrderDetail() {
 
           {order.items.length > 0 && (
             <div className={sectionCls}>
-              <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-2">Позиции заказа</h3>
+              <h3 className="font-display font-semibold text-[color:var(--ink)] mb-2">Позиции заказа</h3>
               <div className="space-y-2 text-sm">
                 {order.items.map((item) => (
-                  <div key={item.id} className="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
-                    <p className="font-medium text-slate-800 dark:text-slate-100">
-                      {item.part_name_snapshot}
-                    </p>
-                    <p className="text-slate-600 dark:text-slate-400">
+                  <div key={item.id} className="rounded-lg border border-[color:var(--border)] p-3">
+                    <p className="font-medium text-[color:var(--ink)]">{item.part_name_snapshot}</p>
+                    <p className="text-[color:var(--steel-light)]">
                       {item.part_brand_snapshot} · {item.part_article_snapshot}
                     </p>
-                    <p className="text-slate-600 dark:text-slate-400">
-                      {item.quantity} × {item.unit_price_snapshot.toLocaleString("ru-RU")} ₽ = {item.subtotal.toLocaleString("ru-RU")} ₽
+                    <p className="text-[color:var(--steel-light)]">
+                      {item.quantity} × {item.unit_price_snapshot.toLocaleString("ru-RU")} ₽ ={" "}
+                      {item.subtotal.toLocaleString("ru-RU")} ₽
                     </p>
                   </div>
                 ))}
@@ -269,90 +328,135 @@ export default function OrderDetail() {
             </div>
           )}
 
-          {/* Photos from courier (stage 3) */}
           {order.photos.length > 0 && (
             <div className={sectionCls}>
-              <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-3">Фото от курьера</h3>
+              <h3 className="font-display font-semibold text-[color:var(--ink)] mb-3">Фото от курьера</h3>
               <div className="flex gap-2 flex-wrap">
                 {order.photos.map((p) => (
                   <a key={p.id} href={p.file_url} target="_blank" rel="noopener noreferrer">
-                    <img src={p.file_url} alt="" className="h-24 w-24 object-cover rounded-lg border border-slate-200 dark:border-slate-600" />
+                    <img
+                      src={p.file_url}
+                      alt=""
+                      className="h-24 w-24 object-cover rounded-lg border border-[color:var(--border)]"
+                    />
                   </a>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Stage 4: Client decision */}
           {isClient && order.status === "photo_uploaded" && (
-            <div className={`${sectionCls} border-amber-300 dark:border-amber-600`}>
-              <h3 className="font-medium text-amber-700 dark:text-amber-300 mb-3">Просмотрите фото и примите решение</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
-                Курьер сфотографировал запчасть. Если всё устраивает — подтвердите покупку.
-                Если нет — откажитесь, и средства будут возвращены.
+            <div className={`${sectionCls} border-amber-400/80`}>
+              <h3 className="font-medium text-amber-800 mb-3">Просмотрите фото и примите решение</h3>
+              <p className="text-sm text-[color:var(--steel-light)] mb-4">
+                Курьер сфотографировал запчасть. Если всё устраивает — подтвердите покупку. Если нет — откажитесь, и
+                средства будут возвращены.
               </p>
-              <div className="flex gap-3">
-                <button onClick={handleApprove} disabled={acting} className={`${btnPrimary} bg-green-600 hover:bg-green-500`}>
+              <div className="flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  onClick={handleApprove}
+                  disabled={acting}
+                  className="app-btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                >
                   Подтвердить покупку
                 </button>
-                <button onClick={handleReject} disabled={acting} className={`${btnPrimary} bg-red-600 hover:bg-red-500`}>
+                <button
+                  type="button"
+                  onClick={handleReject}
+                  disabled={acting}
+                  className="app-btn-secondary border-red-300 text-red-700 hover:bg-red-50 disabled:opacity-60"
+                >
                   Отказаться
                 </button>
               </div>
             </div>
           )}
 
-          {/* Stage 7: Confirm delivery */}
           {isClient && order.status === "handed_to_carrier" && (
-            <div className={`${sectionCls} border-indigo-300 dark:border-indigo-600`}>
-              <h3 className="font-medium text-indigo-700 dark:text-indigo-300 mb-3">Запчасть доставлена?</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+            <div className={`${sectionCls} border-indigo-400/80`}>
+              <h3 className="font-medium text-indigo-800 mb-3">Запчасть доставлена?</h3>
+              <p className="text-sm text-[color:var(--steel-light)] mb-4">
                 Перевозчик должен был доставить вашу запчасть. Подтвердите получение.
               </p>
-              <button onClick={handleConfirmDelivery} disabled={acting} className={`${btnPrimary} bg-indigo-600 hover:bg-indigo-500`}>
+              <button
+                type="button"
+                onClick={handleConfirmDelivery}
+                disabled={acting}
+                className="app-btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+              >
                 Подтвердить получение
               </button>
             </div>
           )}
 
-          {/* Stage 8: Review */}
           {isClient && order.status === "completed" && !order.review && (
-            <div className={`${sectionCls} border-green-300 dark:border-green-600`}>
-              <h3 className="font-medium text-green-700 dark:text-green-300 mb-3">Оцените заказ</h3>
+            <div className={`${sectionCls} border-emerald-400/80`}>
+              <h3 className="font-medium text-emerald-800 mb-3">Оцените заказ</h3>
               <div className="space-y-3">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Оценка курьера (1–5)</label>
-                  <input type="number" min={1} max={5} value={courierRating} onChange={(e) => setCourierRating(Number(e.target.value))} className={inputCls} />
+                  <label className="app-label">Оценка курьера (1–5)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={courierRating}
+                    onChange={(e) => setCourierRating(Number(e.target.value))}
+                    className={inputCls}
+                  />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Оценка сервиса (1–5)</label>
-                  <input type="number" min={1} max={5} value={serviceRating} onChange={(e) => setServiceRating(Number(e.target.value))} className={inputCls} />
+                  <label className="app-label">Оценка сервиса (1–5)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={serviceRating}
+                    onChange={(e) => setServiceRating(Number(e.target.value))}
+                    className={inputCls}
+                  />
                 </div>
-                <textarea placeholder="Ваш отзыв…" value={reviewComment} onChange={(e) => setReviewComment(e.target.value)} rows={2} className={inputCls + " resize-none"} />
-                <button onClick={handleReview} disabled={acting} className={`${btnPrimary} bg-green-600 hover:bg-green-500`}>
+                <textarea
+                  placeholder="Ваш отзыв…"
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  rows={2}
+                  className={`${inputCls} resize-none`}
+                />
+                <button
+                  type="button"
+                  onClick={handleReview}
+                  disabled={acting}
+                  className="app-btn-primary disabled:opacity-60 disabled:cursor-not-allowed"
+                >
                   Отправить отзыв
                 </button>
               </div>
             </div>
           )}
 
-          {/* Show existing review */}
           {order.review && (
             <div className={sectionCls}>
-              <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-2">Ваш отзыв</h3>
-              <div className="text-sm space-y-1 text-slate-600 dark:text-slate-400">
-                <p>Курьер: {"★".repeat(order.review.courier_rating)}{"☆".repeat(5 - order.review.courier_rating)}</p>
-                <p>Сервис: {"★".repeat(order.review.service_rating)}{"☆".repeat(5 - order.review.service_rating)}</p>
-                {order.review.comment && <p className="mt-1 italic">"{order.review.comment}"</p>}
+              <h3 className="font-display font-semibold text-[color:var(--ink)] mb-2">Ваш отзыв</h3>
+              <div className="text-sm space-y-1 text-[color:var(--steel-light)]">
+                <p>
+                  Курьер: {"★".repeat(order.review.courier_rating)}
+                  {"☆".repeat(5 - order.review.courier_rating)}
+                </p>
+                <p>
+                  Сервис: {"★".repeat(order.review.service_rating)}
+                  {"☆".repeat(5 - order.review.service_rating)}
+                </p>
+                {order.review.comment && <p className="mt-1 italic">&quot;{order.review.comment}&quot;</p>}
               </div>
             </div>
           )}
 
-          <p className="text-xs text-slate-400 dark:text-slate-500">
+          <p className="text-xs text-[color:var(--steel-light)]">
             Создан: {new Date(order.created_at).toLocaleString("ru-RU")}
           </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

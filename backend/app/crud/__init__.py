@@ -7,6 +7,9 @@ from app.crud.user import (
     update_user_phone,
     get_courier_profile,
     upsert_courier_profile,
+    list_users,
+    update_user_role,
+    create_user_with_role,
 )
 from app.crud.order import (
     create_order,
@@ -72,6 +75,9 @@ __all__ = [
     "update_user_phone",
     "get_courier_profile",
     "upsert_courier_profile",
+    "list_users",
+    "update_user_role",
+    "create_user_with_role",
     "create_order",
     "get_order_by_id",
     "get_orders_by_client",

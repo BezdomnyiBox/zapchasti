@@ -10,6 +10,7 @@ from app.api.media import router as media_router
 from app.api.catalog import router as catalog_router
 from app.api.cart import router as cart_router
 from app.api.admin_orders import router as admin_orders_router
+from app.api.admin_users import router as admin_users_router
 
 router = APIRouter()
 router.include_router(auth_router)
@@ -22,3 +23,4 @@ router.include_router(media_router)
 router.include_router(catalog_router)
 router.include_router(cart_router)
 router.include_router(admin_orders_router)
+router.include_router(admin_users_router)

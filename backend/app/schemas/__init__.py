@@ -47,6 +47,12 @@ from app.schemas.admin_orders import (
     AdminOrderDetailResponse,
     AdminOrderStatusUpdateRequest,
 )
+from app.schemas.admin_users import (
+    AdminUserCreateRequest,
+    AdminUserRoleUpdateRequest,
+    AdminUserResponse,
+    AdminUsersListResponse,
+)
 
 __all__ = [
     "UserCreate",
@@ -88,4 +94,8 @@ __all__ = [
     "AdminOrderListResponse",
     "AdminOrderDetailResponse",
     "AdminOrderStatusUpdateRequest",
+    "AdminUserCreateRequest",
+    "AdminUserRoleUpdateRequest",
+    "AdminUserResponse",
+    "AdminUsersListResponse",
 ]

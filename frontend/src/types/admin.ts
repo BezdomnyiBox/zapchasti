@@ -1,4 +1,5 @@
 import type { Order, OrderStatus, PaymentStatus } from "./order";
+import type { UserRole } from "../context/AuthContext";
 
 export interface AdminOrderClient {
   id: number;
@@ -26,4 +27,28 @@ export interface AdminOrderListResponse {
 export interface AdminOrderDetailResponse {
   order: Order;
   client: AdminOrderClient;
+}
+
+export interface AdminUser {
+  id: number;
+  email: string;
+  username: string;
+  phone: string | null;
+  role: UserRole;
+  is_active: boolean;
+}
+
+export interface AdminUsersListResponse {
+  items: AdminUser[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface AdminUserCreateRequest {
+  email: string;
+  username: string;
+  password: string;
+  role: UserRole;
+  phone?: string | null;
 }

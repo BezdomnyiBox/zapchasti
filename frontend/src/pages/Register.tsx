@@ -24,7 +24,13 @@ export default function Register() {
     try {
       const user = await auth.register(email.trim(), u, password);
       if (user) {
-        const dest = user.role === "courier" ? "/courier" : user.role === "carrier" ? "/carrier" : "/client";
+        const dest = user.role === "courier"
+          ? "/courier"
+          : user.role === "carrier"
+            ? "/carrier"
+            : user.role === "admin"
+              ? "/admin"
+              : "/client";
         navigate(dest, { replace: true });
       }
     } finally {

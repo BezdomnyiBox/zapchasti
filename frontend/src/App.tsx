@@ -15,6 +15,7 @@ const DashboardCarrier = lazy(() => import("./pages/DashboardCarrier"));
 const ProfilePage = lazy(() => import("./pages/Profile"));
 const Catalog = lazy(() => import("./pages/Catalog"));
 const CatalogPartDetail = lazy(() => import("./pages/CatalogPartDetail"));
+const CartPage = lazy(() => import("./pages/Cart"));
 
 function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allowedRoles: UserRole[] }) {
   const auth = useContext(AuthContext);
@@ -47,6 +48,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/catalog" element={<Catalog />} />
             <Route path="/catalog/parts/:partId" element={<CatalogPartDetail />} />
+            <Route path="/cart" element={<ProtectedRoute allowedRoles={["client"]}><CartPage /></ProtectedRoute>} />
 
             {/* Client routes */}
             <Route path="/client" element={<ProtectedRoute allowedRoles={["client"]}><DashboardClient /></ProtectedRoute>} />

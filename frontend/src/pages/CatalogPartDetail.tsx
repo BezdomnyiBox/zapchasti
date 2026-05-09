@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useCart } from "../hooks/useCart";
 import {
   getCarBodies,
   getCarBrands,
@@ -65,6 +66,9 @@ export default function CatalogPartDetail() {
   const [carBodies, setCarBodies] = useState<CatalogCarBody[]>([]);
   const [carEngines, setCarEngines] = useState<CatalogCarEngine[]>([]);
   const [loading, setLoading] = useState(true);
+  const { add } = useCart();
+  const [adding, setAdding] = useState(false);
+  const [offerUnavailable, setOfferUnavailable] = useState(false);
 
   const partBrandById = useMemo(() => new Map(partBrands.map((brand) => [brand.id, brand.name])), [partBrands]);
   const categoryById = useMemo(() => new Map(flattenCategories(categories).map((category) => [category.id, category.label])), [categories]);
@@ -121,6 +125,26 @@ export default function CatalogPartDetail() {
 
   const catalogBack = searchParams.toString() ? `/catalog?${searchParams.toString()}` : "/catalog";
 
+  const handleAddToCart = async () => {
+    if (!part || offerUnavailable) return;
+    setAdding(true);
+    try {
+      await add(part.id, 1);
+      toast.success("Запчасть добавлена в корзину");
+    } catch (err: unknown) {
+      const detail = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : null;
+      const message = typeof detail === "string" ? detail : "Не удалось добавить в корзину";
+      if (typeof detail === "string" && detail.toLowerCase().includes("нет предлож")) {
+        setOfferUnavailable(true);
+      }
+      toast.error(message);
+    } finally {
+      setAdding(false);
+    }
+  };
+
   if (loading) {
     return <div className="auth-shell text-[color:var(--steel-light)]">Загрузка…</div>;
   }
@@ -146,6 +170,7 @@ export default function CatalogPartDetail() {
           </Link>
           <nav className="app-nav" aria-label="Навигация карточки запчасти">
             <Link to={catalogBack}>Каталог</Link>
+            <Link to="/cart">Корзина</Link>
             <Link to="/client">Мои заказы</Link>
             <Link to="/client/new" className="app-btn-primary">Новый заказ</Link>
           </nav>
@@ -163,8 +188,13 @@ export default function CatalogPartDetail() {
             <h1 className="app-title">{part.name}</h1>
             <p className="app-subtitle">Артикул: {part.article}</p>
           </div>
-          <button disabled className="app-btn-secondary cursor-not-allowed opacity-60">
-            Корзина скоро
+          <button
+            type="button"
+            onClick={() => void handleAddToCart()}
+            disabled={adding || offerUnavailable}
+            className="app-btn-secondary disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {offerUnavailable ? "Нет предложения" : adding ? "Добавление…" : "Добавить в корзину"}
           </button>
         </section>
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { toast } from "react-toastify";
+import { useCart } from "../hooks/useCart";
 import {
   getCarBodies,
   getCarBrands,
@@ -62,6 +63,9 @@ export default function Catalog() {
   const [loading, setLoading] = useState(true);
   const [loadingParts, setLoadingParts] = useState(true);
   const [query, setQuery] = useState(searchParams.get("q") ?? "");
+  const { add } = useCart();
+  const [addingPartId, setAddingPartId] = useState<number | null>(null);
+  const [unavailableParts, setUnavailableParts] = useState<Set<number>>(new Set());
 
   const carBrandId = paramNumber(searchParams, "car_brand_id");
   const carModelId = paramNumber(searchParams, "car_model_id");
@@ -165,6 +169,25 @@ export default function Catalog() {
     setSearchParams({});
   };
 
+  const handleAddToCart = async (partId: number) => {
+    setAddingPartId(partId);
+    try {
+      await add(partId, 1);
+      toast.success("Запчасть добавлена в корзину");
+    } catch (err: unknown) {
+      const detail = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : null;
+      const message = typeof detail === "string" ? detail : "Не удалось добавить в корзину";
+      if (typeof detail === "string" && detail.toLowerCase().includes("нет предлож")) {
+        setUnavailableParts((prev) => new Set(prev).add(partId));
+      }
+      toast.error(message);
+    } finally {
+      setAddingPartId(null);
+    }
+  };
+
   return (
     <div className="app-shell">
       <header className="app-topbar">
@@ -191,6 +214,7 @@ export default function Catalog() {
           </div>
           <div className="app-actions">
             <Link to="/client" className="app-btn-secondary">К заказам</Link>
+            <Link to="/cart" className="app-btn-primary">Корзина</Link>
           </div>
         </section>
 
@@ -248,11 +272,8 @@ export default function Catalog() {
 
         <div className="app-grid app-grid-2 app-section">
           {parts.map((part) => (
-            <Link
-              key={part.id}
-              to={`/catalog/parts/${part.id}?${searchParams.toString()}`}
-              className="app-product-card"
-            >
+            <article key={part.id} className="app-product-card">
+              <Link to={`/catalog/parts/${part.id}?${searchParams.toString()}`} className="block">
               <p className="app-product-title">{part.name}</p>
               <p className="app-product-meta">Артикул: {part.article}</p>
               <p className="app-product-meta">
@@ -261,10 +282,16 @@ export default function Catalog() {
               <p className="app-product-meta">
                 Категория: {categoryById.get(part.category_id) ?? `#${part.category_id}`}
               </p>
-              <span className="app-pill mt-4">
-                Корзина скоро
-              </span>
-            </Link>
+              </Link>
+              <button
+                type="button"
+                onClick={() => void handleAddToCart(part.id)}
+                disabled={addingPartId === part.id || unavailableParts.has(part.id)}
+                className="app-btn-secondary mt-4 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {unavailableParts.has(part.id) ? "Нет предложения" : addingPartId === part.id ? "Добавление…" : "Добавить в корзину"}
+              </button>
+            </article>
           ))}
         </div>
       </main>

@@ -16,7 +16,13 @@ export default function Login() {
     try {
       const u = await auth.login(username.trim(), password);
       if (u) {
-        const dest = u.role === "courier" ? "/courier" : u.role === "carrier" ? "/carrier" : "/client";
+        const dest = u.role === "courier"
+          ? "/courier"
+          : u.role === "carrier"
+            ? "/carrier"
+            : u.role === "admin"
+              ? "/admin"
+              : "/client";
         navigate(dest, { replace: true });
       }
     } finally {

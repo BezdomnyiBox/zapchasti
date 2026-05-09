@@ -17,6 +17,8 @@ const Catalog = lazy(() => import("./pages/Catalog"));
 const CatalogPartDetail = lazy(() => import("./pages/CatalogPartDetail"));
 const CartPage = lazy(() => import("./pages/Cart"));
 const CheckoutPage = lazy(() => import("./pages/Checkout"));
+const AdminOrdersPage = lazy(() => import("./pages/AdminOrders"));
+const AdminOrderDetailPage = lazy(() => import("./pages/AdminOrderDetail"));
 
 function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allowedRoles: UserRole[] }) {
   const auth = useContext(AuthContext);
@@ -33,7 +35,7 @@ function HomeRedirect() {
   switch (auth.user.role) {
     case "courier": return <Navigate to="/courier" replace />;
     case "carrier": return <Navigate to="/carrier" replace />;
-    case "admin": return <Navigate to="/client" replace />;
+    case "admin": return <Navigate to="/admin" replace />;
     default: return <Navigate to="/client" replace />;
   }
 }
@@ -62,6 +64,10 @@ function App() {
 
             {/* Carrier routes */}
             <Route path="/carrier" element={<ProtectedRoute allowedRoles={["carrier"]}><DashboardCarrier /></ProtectedRoute>} />
+
+            {/* Admin routes */}
+            <Route path="/admin" element={<ProtectedRoute allowedRoles={["admin"]}><AdminOrdersPage /></ProtectedRoute>} />
+            <Route path="/admin/orders/:orderId" element={<ProtectedRoute allowedRoles={["admin"]}><AdminOrderDetailPage /></ProtectedRoute>} />
 
             {/* Profile (all authenticated) */}
             <Route path="/profile" element={<ProtectedRoute allowedRoles={["client", "courier", "carrier"]}><ProfilePage /></ProtectedRoute>} />

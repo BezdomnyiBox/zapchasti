@@ -56,6 +56,12 @@ from app.crud.cart import (
     build_cart_summary,
     checkout_cart,
 )
+from app.crud.admin_orders import (
+    list_admin_orders,
+    get_admin_order_by_id,
+    validate_admin_status_transition,
+    update_admin_order_status,
+)
 
 __all__ = [
     "get_user_by_id",
@@ -108,4 +114,8 @@ __all__ = [
     "clear_cart",
     "build_cart_summary",
     "checkout_cart",
+    "list_admin_orders",
+    "get_admin_order_by_id",
+    "validate_admin_status_transition",
+    "update_admin_order_status",
 ]

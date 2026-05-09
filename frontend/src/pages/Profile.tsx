@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AuthContext } from "../context/AuthContext";
 import { updateProfile, getCourierProfile, updateCourierProfile } from "../services/profile";
@@ -57,14 +57,14 @@ export default function Profile() {
   };
 
   const inputCls =
-    "w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent transition";
+    "app-input";
 
   const btnCls =
-    "w-full py-3 px-4 rounded-xl font-medium text-white bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800 disabled:opacity-60 disabled:cursor-not-allowed transition";
+    "app-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed";
 
   const priceField = (label: string, key: keyof CourierProfile) => (
     <div>
-      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{label}</label>
+      <label className="app-label">{label}</label>
       <input
         type="number"
         min="0"
@@ -80,14 +80,48 @@ export default function Profile() {
   const backPath = user?.role === "courier" ? "/courier" : user?.role === "carrier" ? "/carrier" : "/client";
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 px-4 py-8">
-      <div className="mx-auto max-w-lg space-y-6">
-        <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">Профиль</h1>
+    <div className="app-shell">
+      <header className="app-topbar">
+        <div className="app-topbar-inner">
+          <Link to={backPath} className="app-brand" aria-label="Саха Запчасти">
+            <span className="app-brand-mark">СЗ</span>
+            САХА ЗАПЧАСТИ
+          </Link>
+          <nav className="app-nav" aria-label="Навигация профиля">
+            <Link to={backPath}>Назад</Link>
+            {user?.role === "client" && <Link to="/catalog">Каталог</Link>}
+          </nav>
+        </div>
+      </header>
 
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-200 dark:border-slate-700 p-6">
-          <h2 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">Контактный номер</h2>
+      <main className="app-page">
+        <section className="app-hero">
+          <div>
+            <div className="app-kicker">Профиль</div>
+            <h1 className="app-title">Настройки аккаунта</h1>
+            <p className="app-subtitle">
+              Контактные данные используются для связи по заказам и доставке.
+            </p>
+          </div>
+          <div className="app-actions">
+            <button type="button" onClick={() => navigate(backPath)} className="app-btn-secondary">
+              Вернуться
+            </button>
+          </div>
+        </section>
+
+        <div className="app-form-card app-section">
+          <div className="app-section-head mb-4">
+            <div>
+              <h2 className="app-section-title">Контактный номер</h2>
+              <p className="app-section-note">Телефон можно оставить пустым, если связь пока не нужна.</p>
+            </div>
+          </div>
           <div className="space-y-3">
-            <input type="tel" placeholder="+7 (999) 123-45-67" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} />
+            <div>
+              <label className="app-label">Телефон</label>
+              <input type="tel" placeholder="+7 (999) 123-45-67" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputCls} />
+            </div>
             <button onClick={handleSavePhone} disabled={savingPhone} className={btnCls}>
               {savingPhone ? "Сохранение…" : "Сохранить телефон"}
             </button>
@@ -95,10 +129,15 @@ export default function Profile() {
         </div>
 
         {isCourier && (
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-200 dark:border-slate-700 p-6">
-            <h2 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">Мои наценки</h2>
+          <div className="app-form-card app-section">
+            <div className="app-section-head mb-4">
+              <div>
+                <h2 className="app-section-title">Мои наценки</h2>
+                <p className="app-section-note">Стоимость услуг курьера для расчёта заказов.</p>
+              </div>
+            </div>
             {loadingPrices ? (
-              <p className="text-slate-500">Загрузка…</p>
+              <p className="text-[color:var(--steel-light)]">Загрузка…</p>
             ) : (
               <div className="space-y-3">
                 {priceField("Забор запчасти", "pickup_price")}
@@ -111,11 +150,7 @@ export default function Profile() {
             )}
           </div>
         )}
-
-        <button type="button" onClick={() => navigate(backPath)} className="text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition">
-          &larr; Назад
-        </button>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { createOrder } from "../services/orders";
 import type { CargoSize } from "../types/order";
@@ -61,28 +61,56 @@ export default function CreateOrder() {
   };
 
   const inputCls =
-    "w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-400 dark:focus:ring-slate-500 focus:border-transparent transition";
+    "app-input";
 
   const tabCls = (active: boolean) =>
-    `flex-1 py-2 text-center rounded-xl text-sm font-medium transition cursor-pointer ${
+    `flex-1 justify-center rounded-full border px-4 py-2 text-center text-sm font-semibold transition cursor-pointer ${
       active
-        ? "bg-slate-700 text-white dark:bg-slate-500"
-        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600"
+        ? "border-[color:var(--rust)] bg-[color:var(--rust)] text-white"
+        : "border-[color:var(--border)] bg-white text-[color:var(--steel-light)] hover:border-[color:var(--rust)] hover:text-[color:var(--rust)]"
     }`;
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 px-4 py-8">
-      <div className="mx-auto max-w-2xl">
-        <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
-          Новый заказ
-        </h1>
+    <div className="app-shell">
+      <header className="app-topbar">
+        <div className="app-topbar-inner">
+          <Link to="/client" className="app-brand" aria-label="Саха Запчасти">
+            <span className="app-brand-mark">СЗ</span>
+            САХА ЗАПЧАСТИ
+          </Link>
+          <nav className="app-nav" aria-label="Навигация заказа">
+            <Link to="/catalog">Каталог</Link>
+            <Link to="/client">Мои заказы</Link>
+          </nav>
+        </div>
+      </header>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+      <main className="app-page">
+        <section className="app-hero">
+          <div>
+            <div className="app-kicker">Новый заказ</div>
+            <h1 className="app-title">Оформление заявки</h1>
+            <p className="app-subtitle">
+              Укажите ссылку на объявление или опишите деталь, добавьте адреса и комментарий для курьера.
+            </p>
+          </div>
+          <div className="app-actions">
+            <Link to="/catalog" className="app-btn-secondary">Каталог</Link>
+            <button type="button" onClick={() => navigate("/client")} className="app-btn-ghost">
+              Назад к заказам
+            </button>
+          </div>
+        </section>
+
+        <form onSubmit={handleSubmit} className="app-section space-y-5">
           {/* Part info */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-200 dark:border-slate-700 p-6">
-            <h2 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">
-              Запчасть
-            </h2>
+          <div className="app-form-card">
+            <div className="app-section-head mb-4">
+              <div>
+                <h2 className="app-section-title">Запчасть</h2>
+                <p className="app-section-note">Выберите способ описания позиции.</p>
+              </div>
+            </div>
 
             <div className="flex gap-2 mb-4">
               <button type="button" className={tabCls(mode === "drom")} onClick={() => setMode("drom")}>
@@ -95,56 +123,85 @@ export default function CreateOrder() {
 
             <div className="space-y-3">
               {mode === "drom" ? (
-                <input
-                  type="url"
-                  placeholder="https://baza.drom.ru/..."
-                  value={dromUrl}
-                  onChange={(e) => setDromUrl(e.target.value)}
-                  required
-                  className={inputCls}
-                />
+                <div>
+                  <label className="app-label" htmlFor="drom-url">Ссылка на объявление Drom</label>
+                  <input
+                    id="drom-url"
+                    type="url"
+                    placeholder="https://baza.drom.ru/..."
+                    value={dromUrl}
+                    onChange={(e) => setDromUrl(e.target.value)}
+                    required
+                    className={inputCls}
+                  />
+                </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input placeholder="Марка авто" value={carBrand} onChange={(e) => setCarBrand(e.target.value)} className={inputCls} />
-                    <input placeholder="Модель авто" value={carModel} onChange={(e) => setCarModel(e.target.value)} className={inputCls} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="app-label">Марка авто</label>
+                      <input placeholder="Toyota" value={carBrand} onChange={(e) => setCarBrand(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="app-label">Модель авто</label>
+                      <input placeholder="Camry" value={carModel} onChange={(e) => setCarModel(e.target.value)} className={inputCls} />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input type="number" placeholder="Год выпуска" min="1900" max="2100" value={carYear} onChange={(e) => setCarYear(e.target.value)} className={inputCls} />
-                    <input placeholder="Тип кузова" value={bodyType} onChange={(e) => setBodyType(e.target.value)} className={inputCls} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="app-label">Год выпуска</label>
+                      <input type="number" placeholder="2018" min="1900" max="2100" value={carYear} onChange={(e) => setCarYear(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="app-label">Тип кузова</label>
+                      <input placeholder="V70" value={bodyType} onChange={(e) => setBodyType(e.target.value)} className={inputCls} />
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <input placeholder="Название детали" value={partName} onChange={(e) => setPartName(e.target.value)} className={inputCls} />
-                    <input placeholder="Артикул / номер" value={partNumber} onChange={(e) => setPartNumber(e.target.value)} className={inputCls} />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="app-label">Название детали</label>
+                      <input placeholder="Тормозные колодки" value={partName} onChange={(e) => setPartName(e.target.value)} className={inputCls} />
+                    </div>
+                    <div>
+                      <label className="app-label">Артикул / номер</label>
+                      <input placeholder="04465-06200" value={partNumber} onChange={(e) => setPartNumber(e.target.value)} className={inputCls} />
+                    </div>
                   </div>
-                  <textarea placeholder="Доп. описание…" value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={inputCls + " resize-none"} />
+                  <div>
+                    <label className="app-label">Дополнительное описание</label>
+                    <textarea placeholder="Состояние, сторона, комплектация..." value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={inputCls + " resize-none"} />
+                  </div>
                 </>
               )}
 
-              <div className="grid grid-cols-2 gap-3">
-                <input type="number" min="0" step="100" placeholder="Цена запчасти ₽" value={partPrice} onChange={(e) => setPartPrice(e.target.value)} className={inputCls} />
-                <select value={cargoSize} onChange={(e) => setCargoSize(e.target.value as CargoSize)} className={inputCls}>
-                  <option value="small">Мелкая посылка</option>
-                  <option value="large">Крупногабарит</option>
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="app-label">Цена запчасти</label>
+                  <input type="number" min="0" step="100" placeholder="₽" value={partPrice} onChange={(e) => setPartPrice(e.target.value)} className={inputCls} />
+                </div>
+                <div>
+                  <label className="app-label">Размер груза</label>
+                  <select value={cargoSize} onChange={(e) => setCargoSize(e.target.value as CargoSize)} className={inputCls}>
+                    <option value="small">Мелкая посылка</option>
+                    <option value="large">Крупногабарит</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Addresses */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-200 dark:border-slate-700 p-6">
-            <h2 className="text-lg font-medium text-slate-800 dark:text-slate-100 mb-4">
-              Адреса
-            </h2>
+          <div className="app-form-card">
+            <h2 className="app-section-title mb-4">Адреса</h2>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="app-label">
                   Адрес продавца
                 </label>
                 <input placeholder="Город, улица, дом" value={sellerAddress} onChange={(e) => setSellerAddress(e.target.value)} className={inputCls} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="app-label">
                   Адрес доставки *
                 </label>
                 <input placeholder="Куда доставить запчасть" value={deliveryAddress} onChange={(e) => setDeliveryAddress(e.target.value)} required className={inputCls} />
@@ -153,8 +210,8 @@ export default function CreateOrder() {
           </div>
 
           {/* Comment */}
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl shadow-slate-200/50 dark:shadow-slate-900/50 border border-slate-200 dark:border-slate-700 p-6">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+          <div className="app-form-card">
+            <label className="app-label">
               Комментарий к заказу
             </label>
             <textarea placeholder="Дополнительные пожелания…" value={comment} onChange={(e) => setComment(e.target.value)} rows={2} className={inputCls + " resize-none"} />
@@ -163,20 +220,12 @@ export default function CreateOrder() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-xl font-medium text-white bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800 disabled:opacity-60 disabled:cursor-not-allowed transition"
+            className="app-btn-primary w-full disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? "Создание…" : "Оформить заказ"}
           </button>
         </form>
-
-        <button
-          type="button"
-          onClick={() => navigate("/client")}
-          className="mt-4 text-sm text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition"
-        >
-          &larr; Назад к заказам
-        </button>
-      </div>
+      </main>
     </div>
   );
 }

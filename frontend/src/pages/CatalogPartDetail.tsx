@@ -25,8 +25,8 @@ import type {
 
 type CategoryOption = { id: number; label: string };
 
-const sectionCls = "bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5";
-const termCls = "text-slate-500 dark:text-slate-400 shrink-0 w-32";
+const sectionCls = "app-card";
+const termCls = "text-[color:var(--steel-light)] shrink-0 w-32";
 
 function flattenCategories(items: CatalogCategory[], prefix = ""): CategoryOption[] {
   return items.flatMap((item) => {
@@ -122,60 +122,75 @@ export default function CatalogPartDetail() {
   const catalogBack = searchParams.toString() ? `/catalog?${searchParams.toString()}` : "/catalog";
 
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 text-slate-500">Загрузка…</div>;
+    return <div className="auth-shell text-[color:var(--steel-light)]">Загрузка…</div>;
   }
 
   if (!part) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100 dark:bg-slate-900 px-4">
-        <div className="text-center">
-          <p className="text-slate-500 dark:text-slate-400 mb-3">Запчасть не найдена</p>
-          <Link to="/catalog" className="text-sm text-slate-600 dark:text-slate-300 hover:underline">Вернуться в каталог</Link>
+      <div className="auth-shell">
+        <div className="app-card text-center">
+          <p className="text-[color:var(--steel-light)] mb-3">Запчасть не найдена</p>
+          <Link to="/catalog" className="app-btn-secondary">Вернуться в каталог</Link>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900 px-4 py-8">
-      <div className="mx-auto max-w-3xl">
-        <Link to={catalogBack} className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition">
-          &larr; Назад в каталог
+    <div className="app-shell">
+      <header className="app-topbar">
+        <div className="app-topbar-inner">
+          <Link to="/client" className="app-brand" aria-label="Саха Запчасти">
+            <span className="app-brand-mark">СЗ</span>
+            САХА ЗАПЧАСТИ
+          </Link>
+          <nav className="app-nav" aria-label="Навигация карточки запчасти">
+            <Link to={catalogBack}>Каталог</Link>
+            <Link to="/client">Мои заказы</Link>
+            <Link to="/client/new" className="app-btn-primary">Новый заказ</Link>
+          </nav>
+        </div>
+      </header>
+
+      <main className="app-page">
+        <Link to={catalogBack} className="app-btn-ghost">
+          ← Назад в каталог
         </Link>
 
-        <div className="flex items-start justify-between gap-4 mt-4 mb-6">
+        <section className="app-hero mt-5">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-800 dark:text-slate-100">{part.name}</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Артикул: {part.article}</p>
+            <div className="app-kicker">Карточка запчасти</div>
+            <h1 className="app-title">{part.name}</h1>
+            <p className="app-subtitle">Артикул: {part.article}</p>
           </div>
-          <button disabled className="px-4 py-2 rounded-xl font-medium bg-slate-200 text-slate-400 dark:bg-slate-700 dark:text-slate-500 cursor-not-allowed">
+          <button disabled className="app-btn-secondary cursor-not-allowed opacity-60">
             Корзина скоро
           </button>
-        </div>
+        </section>
 
-        <div className="space-y-4">
+        <div className="app-grid app-section">
           <section className={sectionCls}>
-            <h2 className="font-medium text-slate-800 dark:text-slate-100 mb-3">Основное</h2>
+            <h2 className="app-section-title mb-3">Основное</h2>
             <dl className="space-y-2 text-sm">
               <div className="flex gap-2">
                 <dt className={termCls}>Бренд:</dt>
-                <dd className="text-slate-800 dark:text-slate-200">{part.part_brand.name}</dd>
+                <dd>{part.part_brand.name}</dd>
               </div>
               <div className="flex gap-2">
                 <dt className={termCls}>Категория:</dt>
-                <dd className="text-slate-800 dark:text-slate-200">{categoryById.get(part.category_id) ?? part.category.name}</dd>
+                <dd>{categoryById.get(part.category_id) ?? part.category.name}</dd>
               </div>
             </dl>
           </section>
 
           <section className={sectionCls}>
-            <h2 className="font-medium text-slate-800 dark:text-slate-100 mb-3">Применимость</h2>
+            <h2 className="app-section-title mb-3">Применимость</h2>
             {part.applicability.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">Данные о применимости пока не указаны</p>
+              <p className="text-sm text-[color:var(--steel-light)]">Данные о применимости пока не указаны</p>
             ) : (
               <ul className="space-y-2">
                 {part.applicability.map((item) => (
-                  <li key={item.id} className="text-sm text-slate-700 dark:text-slate-300">
+                  <li key={item.id} className="text-sm">
                     {applyLabel(item, carBrandById, carModelById, carBodyById, carEngineById) || "Неизвестная применимость"}
                   </li>
                 ))}
@@ -184,19 +199,19 @@ export default function CatalogPartDetail() {
           </section>
 
           <section className={sectionCls}>
-            <h2 className="font-medium text-slate-800 dark:text-slate-100 mb-3">Аналоги / кроссы</h2>
+            <h2 className="app-section-title mb-3">Аналоги / кроссы</h2>
             {analogs.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">Аналоги пока не указаны</p>
+              <p className="text-sm text-[color:var(--steel-light)]">Аналоги пока не указаны</p>
             ) : (
               <div className="space-y-2">
                 {analogs.map((analog) => (
                   <Link
                     key={analog.id}
                     to={`/catalog/parts/${analog.id}`}
-                    className="block rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+                    className="app-product-card"
                   >
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{analog.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="app-product-title text-sm">{analog.name}</p>
+                    <p className="app-product-meta text-xs">
                       {partBrandById.get(analog.part_brand_id) ?? `#${analog.part_brand_id}`} · {analog.article} · {categoryById.get(analog.category_id) ?? `#${analog.category_id}`}
                     </p>
                   </Link>
@@ -205,7 +220,7 @@ export default function CatalogPartDetail() {
             )}
           </section>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

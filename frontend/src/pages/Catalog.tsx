@@ -24,9 +24,9 @@ import type {
 type CategoryOption = { id: number; label: string };
 
 const inputCls =
-  "w-full px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-400 transition";
+  "app-input";
 const btnCls =
-  "py-3 px-4 rounded-xl font-medium text-white bg-slate-700 hover:bg-slate-600 dark:bg-slate-600 dark:hover:bg-slate-500 disabled:opacity-60 disabled:cursor-not-allowed transition";
+  "app-btn-primary disabled:opacity-60 disabled:cursor-not-allowed";
 
 function paramNumber(searchParams: URLSearchParams, key: string): number | undefined {
   const value = searchParams.get(key);
@@ -166,18 +166,35 @@ export default function Catalog() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 dark:bg-slate-900">
-      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-4">
-        <div className="mx-auto max-w-6xl flex items-center justify-between gap-4">
-          <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">Каталог запчастей</h1>
-          <Link to="/client" className="text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition">
-            Мои заказы
+    <div className="app-shell">
+      <header className="app-topbar">
+        <div className="app-topbar-inner">
+          <Link to="/client" className="app-brand" aria-label="Саха Запчасти">
+            <span className="app-brand-mark">СЗ</span>
+            САХА ЗАПЧАСТИ
           </Link>
+          <nav className="app-nav" aria-label="Навигация каталога">
+            <Link to="/client">Мои заказы</Link>
+            <Link to="/client/new" className="app-btn-primary">Новый заказ</Link>
+          </nav>
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        <section className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-4 md:p-6 mb-6">
+      <main className="app-page">
+        <section className="app-hero">
+          <div>
+            <div className="app-kicker">Каталог</div>
+            <h1 className="app-title">Каталог запчастей</h1>
+            <p className="app-subtitle">
+              Используйте поиск и фильтры по автомобилю, бренду запчасти и категории.
+            </p>
+          </div>
+          <div className="app-actions">
+            <Link to="/client" className="app-btn-secondary">К заказам</Link>
+          </div>
+        </section>
+
+        <section className="app-form-card app-section">
           <form onSubmit={submitSearch} className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 mb-4">
             <input
               value={query}
@@ -188,7 +205,7 @@ export default function Catalog() {
             <button type="submit" className={btnCls}>Найти</button>
           </form>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="app-filter-grid">
             <select value={carBrandId ?? ""} onChange={(event) => updateFilter("car_brand_id", event.target.value)} className={inputCls} disabled={loading}>
               <option value="">Марка автомобиля</option>
               {brands.map((brand) => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
@@ -215,32 +232,36 @@ export default function Catalog() {
             </select>
           </div>
 
-          <button type="button" onClick={resetFilters} className="mt-4 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition">
+          <button type="button" onClick={resetFilters} className="mt-4 app-btn-ghost">
             Сбросить фильтры
           </button>
         </section>
 
-        {loadingParts && <p className="text-slate-500 dark:text-slate-400 text-center mt-8">Загрузка…</p>}
+        {loadingParts && <p className="text-[color:var(--steel-light)] text-center mt-8">Загрузка…</p>}
         {!loadingParts && parts.length === 0 && (
-          <p className="text-slate-500 dark:text-slate-400 text-center mt-12">Запчасти не найдены</p>
+          <div className="app-card text-center app-section">
+            <h2 className="app-section-title">Запчасти не найдены</h2>
+            <p className="app-section-note">Попробуйте изменить фильтры или создать ручную заявку.</p>
+            <Link to="/client/new" className="app-btn-secondary mt-4">Создать заказ</Link>
+          </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="app-grid app-grid-2 app-section">
           {parts.map((part) => (
             <Link
               key={part.id}
               to={`/catalog/parts/${part.id}?${searchParams.toString()}`}
-              className="block bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 hover:shadow-md transition"
+              className="app-product-card"
             >
-              <p className="font-medium text-slate-800 dark:text-slate-100">{part.name}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Артикул: {part.article}</p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="app-product-title">{part.name}</p>
+              <p className="app-product-meta">Артикул: {part.article}</p>
+              <p className="app-product-meta">
                 Бренд: {brandById.get(part.part_brand_id) ?? `#${part.part_brand_id}`}
               </p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="app-product-meta">
                 Категория: {categoryById.get(part.category_id) ?? `#${part.category_id}`}
               </p>
-              <span className="mt-3 inline-flex px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500 cursor-not-allowed">
+              <span className="app-pill mt-4">
                 Корзина скоро
               </span>
             </Link>

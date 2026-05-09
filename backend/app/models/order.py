@@ -94,9 +94,32 @@ class Order(Base):
     photos: Mapped[list["OrderPhoto"]] = relationship(
         back_populates="order", lazy="selectin", cascade="all, delete-orphan",
     )
+    items: Mapped[list["OrderItem"]] = relationship(
+        back_populates="order", lazy="selectin", cascade="all, delete-orphan",
+    )
     review: Mapped["Review | None"] = relationship(
         back_populates="order", uselist=False, lazy="selectin",
     )
+
+
+class OrderItem(Base):
+    __tablename__ = "order_items"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    order_id: Mapped[int] = mapped_column(
+        ForeignKey("orders.id", ondelete="CASCADE"), nullable=False, index=True,
+    )
+    part_id: Mapped[int] = mapped_column(
+        ForeignKey("parts.id", ondelete="RESTRICT"), nullable=False, index=True,
+    )
+    part_name_snapshot: Mapped[str] = mapped_column(String(200), nullable=False)
+    part_article_snapshot: Mapped[str] = mapped_column(String(100), nullable=False)
+    part_brand_snapshot: Mapped[str] = mapped_column(String(100), nullable=False)
+    unit_price_snapshot: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+    quantity: Mapped[int] = mapped_column(Integer, nullable=False)
+    subtotal: Mapped[float] = mapped_column(Numeric(12, 2), nullable=False)
+
+    order: Mapped["Order"] = relationship(back_populates="items")
 
 
 class OrderPhoto(Base):

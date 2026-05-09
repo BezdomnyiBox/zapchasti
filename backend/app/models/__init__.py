@@ -1,5 +1,5 @@
 from app.models.user import User, CourierProfile
-from app.models.order import Order, OrderPhoto, Review
+from app.models.order import Order, OrderItem, OrderPhoto, Review
 from app.models.cart import PartOffer, CartItem
 from app.models.catalog import (
     CarBrand,
@@ -18,6 +18,7 @@ __all__ = [
     "User",
     "CourierProfile",
     "Order",
+    "OrderItem",
     "OrderPhoto",
     "Review",
     "PartOffer",

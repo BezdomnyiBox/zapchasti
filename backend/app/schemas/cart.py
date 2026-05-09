@@ -2,6 +2,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
+from app.models.order import CargoSize
+
 
 class CartAddRequest(BaseModel):
     part_id: int
@@ -29,3 +31,9 @@ class CartItemResponse(BaseModel):
 class CartSummaryResponse(BaseModel):
     items: list[CartItemResponse]
     total: float
+
+
+class CartCheckoutRequest(BaseModel):
+    delivery_address: str = Field(..., min_length=1, max_length=500)
+    cargo_size: CargoSize = CargoSize.SMALL
+    comment: str | None = Field(None, max_length=2000)

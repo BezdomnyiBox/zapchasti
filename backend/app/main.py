@@ -11,6 +11,7 @@ from app.models import (  # noqa: F401
     User,
     CourierProfile,
     Order,
+    OrderItem,
     OrderPhoto,
     Review,
     PartOffer,

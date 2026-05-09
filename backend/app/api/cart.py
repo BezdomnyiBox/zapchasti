@@ -7,6 +7,7 @@ from app.api.deps import get_db, require_exact_role
 from app.models.user import User
 from app.crud.cart import (
     build_cart_summary,
+    checkout_cart,
     clear_cart,
     delete_cart_item,
     get_cart_item_by_id,
@@ -15,11 +16,14 @@ from app.crud.cart import (
     upsert_cart_item,
     update_cart_item_quantity,
 )
+from app.crud.order import get_order_by_id
 from app.schemas.cart import (
     CartAddRequest,
+    CartCheckoutRequest,
     CartSummaryResponse,
     CartUpdateRequest,
 )
+from app.schemas.order import OrderResponse
 
 router = APIRouter(prefix="/cart", tags=["cart"])
 
@@ -94,3 +98,28 @@ async def clear_my_cart(
 ):
     await clear_cart(db, current_user.id)
     return await build_cart_summary(db, current_user.id)
+
+
+@router.post("/checkout", response_model=OrderResponse)
+async def checkout_my_cart(
+    payload: CartCheckoutRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(require_exact_role("client"))],
+):
+    if not current_user.phone:
+        raise HTTPException(400, "Заполните номер телефона в профиле перед оформлением заказа")
+    try:
+        order = await checkout_cart(
+            db=db,
+            user_id=current_user.id,
+            delivery_address=payload.delivery_address.strip(),
+            cargo_size=payload.cargo_size,
+            comment=payload.comment.strip() if payload.comment else None,
+        )
+    except ValueError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+    full_order = await get_order_by_id(db, order.id)
+    if not full_order:
+        raise HTTPException(500, "Не удалось загрузить созданный заказ")
+    return full_order

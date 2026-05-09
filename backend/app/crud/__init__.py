@@ -53,6 +53,7 @@ from app.crud.cart import (
     delete_cart_item,
     clear_cart,
     build_cart_summary,
+    checkout_cart,
 )
 
 __all__ = [
@@ -104,4 +105,5 @@ __all__ = [
     "delete_cart_item",
     "clear_cart",
     "build_cart_summary",
+    "checkout_cart",
 ]

@@ -60,6 +60,20 @@ class ReviewResponse(BaseModel):
 
 # ── Order responses ───────────────────────────────────────
 
+class OrderItemResponse(BaseModel):
+    id: int
+    order_id: int
+    part_id: int
+    part_name_snapshot: str
+    part_article_snapshot: str
+    part_brand_snapshot: str
+    unit_price_snapshot: float
+    quantity: int
+    subtotal: float
+
+    model_config = {"from_attributes": True}
+
+
 class OrderResponse(BaseModel):
     id: int
     client_id: int
@@ -86,6 +100,7 @@ class OrderResponse(BaseModel):
     comment: str | None
 
     status: OrderStatus
+    items: list["OrderItemResponse"] = []
     photos: list[PhotoResponse] = []
     review: ReviewResponse | None = None
 

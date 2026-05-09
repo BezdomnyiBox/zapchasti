@@ -1,5 +1,11 @@
 import { api } from "./api";
-import type { CartAddRequest, CartSummary, CartUpdateRequest } from "../types/cart";
+import type {
+  CartAddRequest,
+  CartCheckoutRequest,
+  CartSummary,
+  CartUpdateRequest,
+} from "../types/cart";
+import type { Order } from "../types/order";
 
 export async function getCart(): Promise<CartSummary> {
   const { data } = await api.get<CartSummary>("/cart");
@@ -25,5 +31,10 @@ export async function removeCartItem(itemId: number): Promise<CartSummary> {
 
 export async function clearCart(): Promise<CartSummary> {
   const { data } = await api.delete<CartSummary>("/cart");
+  return data;
+}
+
+export async function checkoutCart(payload: CartCheckoutRequest): Promise<Order> {
+  const { data } = await api.post<Order>("/cart/checkout", payload);
   return data;
 }

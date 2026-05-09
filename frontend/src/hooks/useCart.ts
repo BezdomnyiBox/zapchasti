@@ -41,5 +41,5 @@ export function useCart() {
     return data;
   }, []);
 
-  return { cart, loading, refresh, add, update, remove, clear };
+  return { cart, loading, refresh, add, update, remove, clear, setCart };
 }

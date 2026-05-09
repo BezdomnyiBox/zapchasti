@@ -26,6 +26,18 @@ export interface Review {
   created_at: string;
 }
 
+export interface OrderItem {
+  id: number;
+  order_id: number;
+  part_id: number;
+  part_name_snapshot: string;
+  part_article_snapshot: string;
+  part_brand_snapshot: string;
+  unit_price_snapshot: number;
+  quantity: number;
+  subtotal: number;
+}
+
 export interface Order {
   id: number;
   client_id: number;
@@ -52,6 +64,7 @@ export interface Order {
   comment: string | null;
 
   status: OrderStatus;
+  items: OrderItem[];
   photos: Photo[];
   review: Review | null;
 

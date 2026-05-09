@@ -199,6 +199,27 @@ export default function OrderDetail() {
             </div>
           )}
 
+          {order.items.length > 0 && (
+            <div className={sectionCls}>
+              <h3 className="font-medium text-slate-800 dark:text-slate-100 mb-2">Позиции заказа</h3>
+              <div className="space-y-2 text-sm">
+                {order.items.map((item) => (
+                  <div key={item.id} className="rounded-lg border border-slate-200 dark:border-slate-700 p-3">
+                    <p className="font-medium text-slate-800 dark:text-slate-100">
+                      {item.part_name_snapshot}
+                    </p>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      {item.part_brand_snapshot} · {item.part_article_snapshot}
+                    </p>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      {item.quantity} × {item.unit_price_snapshot.toLocaleString("ru-RU")} ₽ = {item.subtotal.toLocaleString("ru-RU")} ₽
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Photos from courier (stage 3) */}
           {order.photos.length > 0 && (
             <div className={sectionCls}>

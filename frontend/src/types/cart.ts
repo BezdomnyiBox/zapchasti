@@ -25,3 +25,11 @@ export interface CartAddRequest {
 export interface CartUpdateRequest {
   quantity: number;
 }
+
+export type CheckoutCargoSize = "small" | "large";
+
+export interface CartCheckoutRequest {
+  delivery_address: string;
+  cargo_size: CheckoutCargoSize;
+  comment?: string | null;
+}

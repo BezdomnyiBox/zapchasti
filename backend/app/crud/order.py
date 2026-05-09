@@ -8,6 +8,7 @@ from app.schemas.order import OrderCreate, ReviewCreate
 
 def _order_load_options():
     return [
+        selectinload(Order.items),
         selectinload(Order.photos),
         selectinload(Order.review),
     ]

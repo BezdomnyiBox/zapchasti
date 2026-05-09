@@ -1,6 +1,6 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
-from app.models.order import OrderStatus, CargoSize
+from app.models.order import OrderStatus, CargoSize, PaymentStatus
 
 
 # ── Order create ──────────────────────────────────────────
@@ -100,6 +100,10 @@ class OrderResponse(BaseModel):
     comment: str | None
 
     status: OrderStatus
+    payment_status: PaymentStatus
+    paid_at: datetime | None
+    payment_provider: str | None
+    payment_id: str | None
     items: list["OrderItemResponse"] = []
     photos: list[PhotoResponse] = []
     review: ReviewResponse | None = None
@@ -117,5 +121,15 @@ class OrderListItem(BaseModel):
     drom_url: str | None = None
     total_price: float | None = None
     created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class MockPaymentResponse(BaseModel):
+    order_id: int
+    payment_status: PaymentStatus
+    paid_at: datetime | None
+    payment_provider: str | None
+    payment_id: str | None
 
     model_config = {"from_attributes": True}

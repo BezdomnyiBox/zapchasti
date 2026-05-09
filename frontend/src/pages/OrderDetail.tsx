@@ -2,8 +2,8 @@ import { useEffect, useState, useContext } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { AuthContext } from "../context/AuthContext";
-import { getOrder, approveOrder, rejectOrder, confirmDelivery, submitReview } from "../services/orders";
-import type { Order, OrderStatus, CargoSize } from "../types/order";
+import { getOrder, approveOrder, rejectOrder, confirmDelivery, submitReview, payOrderMock } from "../services/orders";
+import type { Order, OrderStatus, CargoSize, PaymentStatus } from "../types/order";
 
 const STATUS_LABELS: Record<OrderStatus, string> = {
   waiting_courier: "Ожидает курьера",
@@ -32,6 +32,13 @@ const CARGO_LABELS: Record<CargoSize, string> = {
   large: "Крупногабарит",
 };
 
+const PAYMENT_LABELS: Record<PaymentStatus, string> = {
+  pending: "Ожидает оплаты",
+  paid: "Оплачен",
+  failed: "Оплата неуспешна",
+  refunded: "Возврат",
+};
+
 export default function OrderDetail() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
@@ -45,6 +52,7 @@ export default function OrderDetail() {
   const [reviewComment, setReviewComment] = useState("");
 
   const isClient = order?.client_id === auth?.user?.id;
+  const canPay = isClient && order?.payment_status === "pending" && order?.status !== "cancelled";
 
   useEffect(() => {
     if (!orderId) return;
@@ -101,6 +109,25 @@ export default function OrderDetail() {
       toast.success("Спасибо за отзыв!");
     } catch { toast.error("Ошибка"); }
     finally { setActing(false); }
+  };
+
+  const handlePay = async () => {
+    if (!order) return;
+    setActing(true);
+    try {
+      await payOrderMock(order.id);
+      const updated = await getOrder(order.id);
+      setOrder(updated);
+      toast.success("Оплата прошла успешно");
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : null;
+      toast.error(typeof msg === "string" ? msg : "Не удалось провести оплату");
+    } finally {
+      setActing(false);
+    }
   };
 
   if (loading) {
@@ -195,6 +222,28 @@ export default function OrderDetail() {
                 <p className="font-semibold text-slate-800 dark:text-slate-100 pt-1 border-t border-slate-200 dark:border-slate-700">
                   Итого: {order.total_price.toLocaleString("ru-RU")} ₽
                 </p>
+                <p className="text-slate-600 dark:text-slate-400">
+                  Статус оплаты: {PAYMENT_LABELS[order.payment_status]}
+                </p>
+                {order.payment_id && (
+                  <p className="text-slate-600 dark:text-slate-400">
+                    Payment ID: {order.payment_id}
+                  </p>
+                )}
+                {order.paid_at && (
+                  <p className="text-slate-600 dark:text-slate-400">
+                    Оплачен: {new Date(order.paid_at).toLocaleString("ru-RU")}
+                  </p>
+                )}
+                {canPay && (
+                  <button
+                    onClick={handlePay}
+                    disabled={acting}
+                    className={`${btnPrimary} bg-emerald-600 hover:bg-emerald-500 mt-2`}
+                  >
+                    Оплатить
+                  </button>
+                )}
               </div>
             </div>
           )}

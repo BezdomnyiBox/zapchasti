@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db, get_current_user_model, require_exact_role
 from app.models.user import User
-from app.models.order import OrderStatus
+from app.models.order import OrderStatus, PaymentStatus
 from app.crud.order import (
     create_order,
     get_order_by_id,
@@ -14,8 +14,9 @@ from app.crud.order import (
     client_approve,
     client_reject,
     client_confirm_delivery,
+    pay_order_mock,
 )
-from app.schemas.order import OrderCreate, OrderResponse, OrderListItem
+from app.schemas.order import OrderCreate, OrderResponse, OrderListItem, MockPaymentResponse
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
@@ -121,3 +122,36 @@ async def confirm_delivery(
         raise HTTPException(400, "Заказ ещё не передан перевозчику")
     order = await client_confirm_delivery(db, order)
     return await get_order_by_id(db, order.id)
+
+
+@router.post("/{order_id}/pay/mock", response_model=MockPaymentResponse)
+async def pay_order_mock_endpoint(
+    order_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user_model)],
+):
+    order = await get_order_by_id(db, order_id)
+    if not order:
+        raise HTTPException(404, "Заказ не найден")
+
+    is_owner_or_admin = (
+        order.client_id == current_user.id or current_user.role.value == "admin"
+    )
+    if not is_owner_or_admin:
+        raise HTTPException(403, "Нет доступа к оплате этого заказа")
+
+    if order.payment_status == PaymentStatus.PAID:
+        raise HTTPException(400, "Заказ уже оплачен")
+    if order.payment_status == PaymentStatus.REFUNDED:
+        raise HTTPException(400, "Заказ был возвращен, повторная оплата недоступна")
+    if order.status == OrderStatus.CANCELLED:
+        raise HTTPException(400, "Нельзя оплатить отмененный заказ")
+
+    updated = await pay_order_mock(db, order)
+    return MockPaymentResponse(
+        order_id=updated.id,
+        payment_status=updated.payment_status,
+        paid_at=updated.paid_at,
+        payment_provider=updated.payment_provider,
+        payment_id=updated.payment_id,
+    )

@@ -9,6 +9,7 @@ export type OrderStatus =
   | "cancelled";
 
 export type CargoSize = "small" | "large";
+export type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
 
 export interface Photo {
   id: number;
@@ -64,6 +65,10 @@ export interface Order {
   comment: string | null;
 
   status: OrderStatus;
+  payment_status: PaymentStatus;
+  paid_at: string | null;
+  payment_provider: string | null;
+  payment_id: string | null;
   items: OrderItem[];
   photos: Photo[];
   review: Review | null;
@@ -105,6 +110,14 @@ export interface ReviewPayload {
   courier_rating: number;
   service_rating: number;
   comment?: string | null;
+}
+
+export interface MockPaymentResponse {
+  order_id: number;
+  payment_status: PaymentStatus;
+  paid_at: string | null;
+  payment_provider: string | null;
+  payment_id: string | null;
 }
 
 export interface CourierProfile {

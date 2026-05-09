@@ -29,6 +29,13 @@ class CargoSize(str, enum.Enum):
     LARGE = "large"
 
 
+class PaymentStatus(str, enum.Enum):
+    PENDING = "pending"
+    PAID = "paid"
+    FAILED = "failed"
+    REFUNDED = "refunded"
+
+
 class Order(Base):
     __tablename__ = "orders"
 
@@ -81,6 +88,14 @@ class Order(Base):
         Enum(OrderStatus, values_callable=lambda x: [e.value for e in x]),
         default=OrderStatus.WAITING_COURIER, nullable=False,
     )
+    payment_status: Mapped[PaymentStatus] = mapped_column(
+        Enum(PaymentStatus, values_callable=lambda x: [e.value for e in x]),
+        default=PaymentStatus.PENDING,
+        nullable=False,
+    )
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    payment_provider: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    payment_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=_utcnow, nullable=False,
     )

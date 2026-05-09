@@ -1,5 +1,12 @@
 import { api } from "./api";
-import type { Order, OrderListItem, OrderCreatePayload, Review, ReviewPayload } from "../types/order";
+import type {
+  MockPaymentResponse,
+  Order,
+  OrderListItem,
+  OrderCreatePayload,
+  Review,
+  ReviewPayload,
+} from "../types/order";
 
 export async function createOrder(data: OrderCreatePayload): Promise<Order> {
   const { data: order } = await api.post<Order>("/orders", data);
@@ -33,5 +40,10 @@ export async function confirmDelivery(id: number): Promise<Order> {
 
 export async function submitReview(orderId: number, payload: ReviewPayload): Promise<Review> {
   const { data } = await api.post<Review>(`/reviews/${orderId}`, payload);
+  return data;
+}
+
+export async function payOrderMock(orderId: number): Promise<MockPaymentResponse> {
+  const { data } = await api.post<MockPaymentResponse>(`/orders/${orderId}/pay/mock`);
   return data;
 }

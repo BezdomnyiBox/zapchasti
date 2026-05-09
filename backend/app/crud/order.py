@@ -1,8 +1,9 @@
+from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models.order import Order, OrderPhoto, OrderStatus, Review
+from app.models.order import Order, OrderPhoto, OrderStatus, PaymentStatus, Review
 from app.schemas.order import OrderCreate, ReviewCreate
 
 
@@ -151,6 +152,16 @@ async def client_reject(db: AsyncSession, order: Order) -> Order:
 
 async def client_confirm_delivery(db: AsyncSession, order: Order) -> Order:
     order.status = OrderStatus.COMPLETED
+    await db.commit()
+    await db.refresh(order)
+    return order
+
+
+async def pay_order_mock(db: AsyncSession, order: Order) -> Order:
+    order.payment_status = PaymentStatus.PAID
+    order.paid_at = datetime.now(timezone.utc)
+    order.payment_provider = "mock"
+    order.payment_id = f"mock-{order.id}"
     await db.commit()
     await db.refresh(order)
     return order

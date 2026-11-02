@@ -1,9 +1,10 @@
 pydantic-settings>=2.0.0
 pydantic[email]
 email-validator
-fastapi
+# fastapi-limiter 0.2.0 несовместим с FastAPI 0.137+ (роутер _IncludedRouter без .path)
+fastapi<0.137
 uvicorn[standard]
-sqlalchemy>=2.0
+sqlalchemy[asyncio]>=2.0,<2.2
 asyncpg
 psycopg2-binary
 alembic

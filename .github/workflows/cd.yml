@@ -14,22 +14,31 @@ jobs:
   deploy:
     name: Deploy to Server
     runs-on: ubuntu-latest
+    # Контекст secrets нельзя использовать в if на уровне job — наличие секретов проверяет первый шаг
     if: >
       github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'main' &&
-      secrets.DEPLOY_HOST != '' &&
-      secrets.DEPLOY_USER != '' &&
-      secrets.DEPLOY_SSH_KEY != '' &&
-      secrets.DEPLOY_PATH != ''
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
     environment:
       name: production
+    env:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+      DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
     steps:
+      - name: Check deploy secrets
+        id: secrets
+        run: |
+          if [ -n "$DEPLOY_HOST" ] && [ -n "$DEPLOY_USER" ] && [ -n "$DEPLOY_SSH_KEY" ] && [ -n "$DEPLOY_PATH" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Секреты деплоя не заданы — деплой пропущен"
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Deploy over SSH
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        if: steps.secrets.outputs.configured == 'true'
         run: |
           mkdir -p ~/.ssh
           echo "$DEPLOY_SSH_KEY" > ~/.ssh/id_ed25519
